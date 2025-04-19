@@ -210,3 +210,6 @@ class DonationFeedbackViewSet(ModelViewSet):
         return DonationFeedback.objects.filter(
             donation__donor=self.request.user
         )
+        
+    def perform_create(self, serializer):
+        serializer.save(recipient=self.request.user)
