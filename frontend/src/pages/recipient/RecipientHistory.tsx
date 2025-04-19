@@ -23,10 +23,12 @@ import {
   Pending,
   Cancel,
   Visibility,
+  Star,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { DonationDetailsDialog } from '../../components/donation/DonationDetailsDialog';
+import { RatingDialog } from '../../components/donation/RatingDialog';
 import { Donation } from '../../types/donation';
 import { api } from '../../services/api';
 
@@ -36,6 +38,7 @@ export const RecipientHistory: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
 
   useEffect(() => {
     const fetchDonations = async () => {
@@ -175,6 +178,18 @@ export const RecipientHistory: React.FC = () => {
                   <Divider />
                   
                   <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
+                    <Tooltip title="Rate Donation">
+                      <IconButton 
+                        onClick={() => {
+                          setSelectedDonation(donation);
+                          setShowRatingDialog(true);
+                        }}
+                        color="primary"
+                        sx={{ mr: 1 }}
+                      >
+                        <Star />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="View Details">
                       <IconButton 
                         onClick={() => {
@@ -200,7 +215,19 @@ export const RecipientHistory: React.FC = () => {
             setShowDetailsDialog(false);
             setSelectedDonation(null);
           }}
+          isRecipient={true}
         />
+
+        {selectedDonation && (
+          <RatingDialog
+            donation={selectedDonation}
+            open={showRatingDialog}
+            onClose={() => {
+              setShowRatingDialog(false);
+              setSelectedDonation(null);
+            }}
+          />
+        )}
       </Container>
     </DashboardLayout>
   );

@@ -13,7 +13,7 @@ export interface Donation {
         address?: string;
     };
     image_url?: string;
-    status: 'available' | 'claimed' | 'expired' | 'cancelled';
+    status: 'available' | 'claimed' | 'expired' | 'cancelled' | 'completed';
     status_display: string;
     is_available: boolean;
     donor: {
