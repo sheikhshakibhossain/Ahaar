@@ -173,8 +173,8 @@ export const NearbyDonationsPage: React.FC = () => {
       // Refresh the donations list
       const updatedDonations = donations.filter(d => d.id !== selectedDonation.id);
       setDonations(updatedDonations);
-      // Show success message or redirect
-      navigate('/recipient/claimed-donations');
+      // Redirect to recipient history page
+      navigate('/recipient-dashboard/history');
     } catch (err: any) {
       // Handle specific error messages from the backend
       const errorMessage = err.response?.data?.error || 'Failed to claim donation. Please try again.';

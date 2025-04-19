@@ -13,17 +13,40 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Chip,
+  LinearProgress,
+  IconButton,
+  Tooltip,
+  Divider,
   Grid,
 } from '@mui/material';
-import { LocationOn as LocationIcon, History as HistoryIcon, Search as SearchIcon } from '@mui/icons-material';
+import {
+  LocationOn as LocationIcon,
+  History as HistoryIcon,
+  Search as SearchIcon,
+  TrendingUp,
+  AccessTime,
+  CheckCircle,
+  Pending,
+  Cancel,
+  Info,
+  Inventory2,
+  PendingActions,
+} from '@mui/icons-material';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
+import { format } from 'date-fns';
+import { api } from '../../services/api';
+import { Donation } from '../../types/donation';
 
 interface User {
-  id: string;
-  name: string;
+  id: number;
+  username: string;
   email: string;
-  role: string;
+  first_name: string;
+  last_name: string;
+  role: 'donor' | 'recipient';
+  phone_number?: string;
+  address?: string;
 }
 
 interface Request {
@@ -32,29 +55,83 @@ interface Request {
   status: 'pending' | 'approved' | 'completed' | 'rejected';
   createdAt: string;
   updatedAt: string;
+  quantity: number;
+  donor: {
+    name: string;
+  };
 }
 
 interface DashboardStats {
-  totalRequests: number;
-  pendingRequests: number;
-  completedRequests: number;
-  activeRequests: number;
+  totalDonations: number;
+  pendingDonations: number;
+  completedDonations: number;
+  activeDonations: number;
+  successRate: number;
+  averageResponseTime: number;
 }
 
 export const RecipientDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
-    totalRequests: 0,
-    pendingRequests: 0,
-    completedRequests: 0,
-    activeRequests: 0,
+    totalDonations: 0,
+    pendingDonations: 0,
+    completedDonations: 0,
+    activeDonations: 0,
+    successRate: 0,
+    averageResponseTime: 0,
   });
   const [recentRequests, setRecentRequests] = useState<Request[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch dashboard stats and recent requests from API
-    // This will be implemented when the backend is ready
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching claimed donations...');
+        // Fetch claimed donations
+        const response = await api.get<Donation[]>('/api/donations/claimed/');
+        console.log('API Response:', response);
+        const claimedDonations = response.data;
+        console.log('Claimed Donations:', claimedDonations);
+        
+        // Count completed donations - all claimed donations are considered completed
+        const completedCount = claimedDonations.length;
+        console.log('Completed Count:', completedCount);
+        
+        // Update stats
+        setStats(prevStats => ({
+          ...prevStats,
+          completedDonations: completedCount,
+          totalDonations: claimedDonations.length,
+        }));
+        console.log('Updated Stats:', {
+          completedDonations: completedCount,
+          totalDonations: claimedDonations.length,
+        });
+        
+        // Convert donations to requests format for recent requests
+        const requests: Request[] = claimedDonations.slice(0, 5).map(donation => ({
+          id: donation.id.toString(),
+          donationTitle: donation.title,
+          status: 'completed', // All claimed donations are considered completed
+          createdAt: donation.created_at,
+          updatedAt: donation.updated_at || donation.created_at,
+          quantity: donation.quantity || 1,
+          donor: {
+            name: donation.donor?.name || 'Anonymous Donor'
+          }
+        }));
+        
+        setRecentRequests(requests);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   const getStatusColor = (status: Request['status']) => {
@@ -72,104 +149,89 @@ export const RecipientDashboard: React.FC = () => {
     }
   };
 
+  const getStatusIcon = (status: Request['status']) => {
+    switch (status) {
+      case 'pending':
+        return <Pending />;
+      case 'approved':
+        return <CheckCircle />;
+      case 'completed':
+        return <CheckCircle />;
+      case 'rejected':
+        return <Cancel />;
+      default:
+        return <Info />;
+    }
+  };
+
+  const StatCard: React.FC<{
+    title: string;
+    value: number | string;
+    icon: React.ReactNode;
+    color: string;
+    subtitle?: string;
+  }> = ({ title, value, icon, color, subtitle }) => (
+    <Card sx={{ height: '100%' }}>
+      <CardContent>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ 
+            p: 1, 
+            borderRadius: 1, 
+            bgcolor: `${color}.lighter`,
+            color: `${color}.main`,
+            mr: 2 
+          }}>
+            {icon}
+          </Box>
+          <Typography color="textSecondary">
+            {title}
+          </Typography>
+        </Box>
+        <Typography variant="h4" component="div" gutterBottom>
+          {value}
+        </Typography>
+        {subtitle && (
+          <Typography variant="body2" color="textSecondary">
+            {subtitle}
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <DashboardLayout title="Recipient Dashboard">
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Welcome, {user?.name || 'Recipient'}!
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<SearchIcon />}
-            onClick={() => navigate('/recipient-dashboard/nearby')}
-          >
-            Find Nearby Donations
-          </Button>
+        {/* Welcome Section */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 4,
+          p: 3,
+          bgcolor: 'primary.lighter',
+          borderRadius: 2,
+        }}>
+          <Box>
+            <Typography variant="h4" gutterBottom>
+              Welcome back, {user?.first_name ? `${user.first_name} ${user.last_name}` : 'Recipient'}! 👋
+            </Typography>
+            <Typography variant="subtitle1" color="textSecondary">
+              Here's what's happening with your donations
+            </Typography>
+          </Box>
+          
         </Box>
 
         <Grid container spacing={3}>
-          {/* Stats Cards */}
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Requests
-                </Typography>
-                <Typography variant="h4">{stats.totalRequests}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Pending Requests
-                </Typography>
-                <Typography variant="h4">{stats.pendingRequests}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Completed Requests
-                </Typography>
-                <Typography variant="h4">{stats.completedRequests}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Active Requests
-                </Typography>
-                <Typography variant="h4">{stats.activeRequests}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Recent Requests */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
-                  Recent Requests
-                </Typography>
-                <Button
-                  startIcon={<HistoryIcon />}
-                  onClick={() => navigate('/recipient-dashboard/history')}
-                >
-                  View All
-                </Button>
-              </Box>
-              {recentRequests.length > 0 ? (
-                <List>
-                  {recentRequests.map((request) => (
-                    <ListItem key={request.id} divider>
-                      <ListItemText
-                        primary={request.donationTitle}
-                        secondary={`Requested on ${new Date(request.createdAt).toLocaleDateString()}`}
-                      />
-                      <ListItemSecondaryAction>
-                        <Chip
-                          label={request.status}
-                          color={getStatusColor(request.status)}
-                          size="small"
-                        />
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography color="textSecondary" align="center">
-                  No recent requests to display.
-                </Typography>
-              )}
-            </Paper>
+            <StatCard
+              title="Completed Donations"
+              value={stats.completedDonations}
+              icon={<CheckCircle />}
+              color="success"
+              subtitle={`${stats.completedDonations} donations taken`}
+            />
           </Grid>
 
           {/* Quick Actions */}
@@ -180,7 +242,7 @@ export const RecipientDashboard: React.FC = () => {
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Button
-                  variant="outlined"
+                  variant="contained"
                   startIcon={<LocationIcon />}
                   onClick={() => navigate('/recipient-dashboard/nearby')}
                 >
