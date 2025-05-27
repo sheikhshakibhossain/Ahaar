@@ -26,8 +26,31 @@ export default {
                     800: '#166534',
                     900: '#14532d',
                 }
-            }
+            },
+            animation: {
+                'float': 'float 6s ease-in-out infinite',
+                'pulse-slow': 'pulse 4s ease-in-out infinite',
+                'shimmer': 'shimmer 2s infinite linear',
+            },
+            keyframes: {
+                float: {
+                    '0%, 100%': { transform: 'translateY(0)' },
+                    '50%': { transform: 'translateY(-20px)' },
+                },
+                pulse: {
+                    '0%, 100%': { transform: 'scale(1)', opacity: '0.5' },
+                    '50%': { transform: 'scale(1.05)', opacity: '0.7' },
+                },
+                shimmer: {
+                    '0%': { backgroundPosition: '-1000px 0' },
+                    '100%': { backgroundPosition: '1000px 0' },
+                },
+            },
         },
     },
-    plugins: [],
+    plugins: [
+        require('@tailwindcss/forms'),
+        require('@tailwindcss/typography'),
+        require('@tailwindcss/aspect-ratio'),
+    ],
 } 
