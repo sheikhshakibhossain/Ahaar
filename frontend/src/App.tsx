@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginForm } from './components/auth/LoginForm';
@@ -20,69 +20,67 @@ function App() {
         <ThemeProvider theme={theme}>
             <CssBaseline />
             <AuthProvider>
-                <Router>
-                    <Routes>
-                        {/* Public Routes */}
-                        <Route path="/" element={<LandingPage />} />
-                        <Route path="/login" element={<LoginForm />} />
-                        <Route path="/register" element={<RegisterForm />} />
-                        
-                        {/* Protected Donor Routes */}
-                        <Route 
-                            path="/dashboard" 
-                            element={
-                                <ProtectedRoute requiredRole="donor">
-                                    <DonorDashboard />
-                                </ProtectedRoute>
-                            } 
-                        />
-                        <Route 
-                            path="/dashboard/donate" 
-                            element={
-                                <ProtectedRoute requiredRole="donor">
-                                    <CreateDonationPage />
-                                </ProtectedRoute>
-                            } 
-                        />
-                        <Route 
-                            path="/dashboard/history" 
-                            element={
-                                <ProtectedRoute requiredRole="donor">
-                                    <DonationHistory />
-                                </ProtectedRoute>
-                            } 
-                        />
+                <Routes>
+                    {/* Public Routes */}
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<LoginForm />} />
+                    <Route path="/register" element={<RegisterForm />} />
+                    
+                    {/* Protected Donor Routes */}
+                    <Route 
+                        path="/dashboard" 
+                        element={
+                            <ProtectedRoute requiredRole="donor">
+                                <DonorDashboard />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/dashboard/donate" 
+                        element={
+                            <ProtectedRoute requiredRole="donor">
+                                <CreateDonationPage />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/dashboard/history" 
+                        element={
+                            <ProtectedRoute requiredRole="donor">
+                                <DonationHistory />
+                            </ProtectedRoute>
+                        } 
+                    />
 
-                        {/* Protected Recipient Routes */}
-                        <Route 
-                            path="/recipient-dashboard" 
-                            element={
-                                <ProtectedRoute requiredRole="recipient">
-                                    <RecipientDashboard />
-                                </ProtectedRoute>
-                            } 
-                        />
-                        <Route 
-                            path="/recipient-dashboard/nearby" 
-                            element={
-                                <ProtectedRoute requiredRole="recipient">
-                                    <NearbyDonationsPage />
-                                </ProtectedRoute>
-                            } 
-                        />
-                        <Route 
-                            path="/recipient-dashboard/history" 
-                            element={
-                                <ProtectedRoute requiredRole="recipient">
-                                    <RecipientHistory />
-                                </ProtectedRoute>
-                            } 
-                        />
+                    {/* Protected Recipient Routes */}
+                    <Route 
+                        path="/recipient-dashboard" 
+                        element={
+                            <ProtectedRoute requiredRole="recipient">
+                                <RecipientDashboard />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/recipient-dashboard/nearby" 
+                        element={
+                            <ProtectedRoute requiredRole="recipient">
+                                <NearbyDonationsPage />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/recipient-dashboard/history" 
+                        element={
+                            <ProtectedRoute requiredRole="recipient">
+                                <RecipientHistory />
+                            </ProtectedRoute>
+                        } 
+                    />
 
-                        {/* Catch all route */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </Router>
+                    {/* Catch all route */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
             </AuthProvider>
         </ThemeProvider>
     );
