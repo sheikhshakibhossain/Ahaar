@@ -29,6 +29,7 @@ import { toast } from 'react-toastify';
 import { adminService, BadDonor } from '../../services/admin';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { WarningDialog } from '../../components/admin/WarningDialog';
 
 const AdminPanel: React.FC = () => {
     const { logout } = useAuth();
@@ -42,6 +43,8 @@ const AdminPanel: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [minFeedback, setMinFeedback] = useState(3);
     const [sortBy, setSortBy] = useState<'rating' | 'feedback'>('rating');
+    const [selectedDonor, setSelectedDonor] = useState<BadDonor | null>(null);
+    const [showWarningDialog, setShowWarningDialog] = useState(false);
 
     const handleLogout = async () => {
         try {
@@ -66,11 +69,8 @@ const AdminPanel: React.FC = () => {
                 search: searchTerm,
             });
             console.log('API Response:', response);
-            console.log('Donors:', response.donors);
-            console.log('First donor:', response.donors[0]);
-            console.log('Is banned field:', response.donors[0]?.is_banned);
-            setDonors(response.donors || []);
-            setTotalDonors(response.total || 0);
+            setDonors(response.results || []);
+            setTotalDonors(response.count || 0);
         } catch (err) {
             console.error('Error fetching bad donors:', err);
             setError('Failed to fetch bad donors');
@@ -85,18 +85,21 @@ const AdminPanel: React.FC = () => {
         // eslint-disable-next-line
     }, [page, rowsPerPage, minFeedback, sortBy, searchTerm]);
 
-    const handleWarnDonor = async (donorId: string) => {
-        try {
-            await adminService.warnDonor(donorId);
-            toast.success('Warning sent successfully');
-            fetchBadDonors(); // Refresh the list
-        } catch (err) {
-            toast.error('Failed to send warning');
-            console.error('Error warning donor:', err);
+    const handleWarnDonor = (donorId: number) => {
+        const donor = donors.find(d => d.id === donorId);
+        if (donor) {
+            setSelectedDonor(donor);
+            setShowWarningDialog(true);
         }
     };
 
-    const handleBanDonor = async (donorId: string) => {
+    const handleWarningSent = () => {
+        setShowWarningDialog(false);
+        setSelectedDonor(null);
+        fetchBadDonors();
+    };
+
+    const handleBanDonor = async (donorId: number) => {
         try {
             await adminService.banDonor(donorId);
             toast.success('Donor banned successfully');
@@ -107,7 +110,7 @@ const AdminPanel: React.FC = () => {
         }
     };
 
-    const handleUnbanDonor = async (donorId: string) => {
+    const handleUnbanDonor = async (donorId: number) => {
         try {
             await adminService.unbanDonor(donorId);
             toast.success('Donor unbanned successfully');
@@ -291,6 +294,16 @@ const AdminPanel: React.FC = () => {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Paper>
+
+            <WarningDialog
+                open={showWarningDialog}
+                onClose={() => {
+                    setShowWarningDialog(false);
+                    setSelectedDonor(null);
+                }}
+                donorId={selectedDonor?.id || 0}
+                onWarningSent={handleWarningSent}
+            />
         </Container>
     );
 };
