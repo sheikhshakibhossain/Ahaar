@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
-from users.models import Donation, DonationFeedback, DonationClaim
+from users.models import Donation, DonationFeedback, DonationClaim, Warning
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth.models import update_last_login
@@ -155,4 +155,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             print(f"Login error: {str(e)}")
             raise serializers.ValidationError({
                 "detail": "An error occurred during login. Please try again."
-            }) 
+            })
+
+class WarningSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Warning
+        fields = ['id', 'user', 'message', 'created_at', 'is_read']
+        read_only_fields = ['id', 'created_at'] 

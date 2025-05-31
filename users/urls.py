@@ -7,7 +7,10 @@ from .views import (
     DonationFeedbackViewSet,
     CustomTokenObtainPairView,
     AdminBadDonorsView,
-    AdminDonorActionView
+    AdminDonorActionView,
+    DonorWarningsView,
+    AdminSendWarningView,
+    WarningDismissView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -24,4 +27,7 @@ urlpatterns = [
     # Admin endpoints
     path('admin/bad-donors/', AdminBadDonorsView.as_view(), name='admin_bad_donors'),
     path('admin/donors/<int:donor_id>/<str:action>/', AdminDonorActionView.as_view(), name='admin_donor_action'),
+    path('donor/warnings/', DonorWarningsView.as_view(), name='donor-warnings'),
+    path('donor/warnings/<int:warning_id>/dismiss/', WarningDismissView.as_view(), name='warning-dismiss'),
+    path('admin/donors/<int:donor_id>/warn/', AdminSendWarningView.as_view(), name='admin-send-warning'),
 ] + router.urls 

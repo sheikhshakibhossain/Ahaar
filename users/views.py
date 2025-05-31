@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -12,8 +12,8 @@ from .serializers import (
 )
 from rest_framework.decorators import action
 from rest_framework.viewsets import ModelViewSet
-from .models import Donation, DonationFeedback, DonationClaim
-from .serializers import DonationSerializer, DonationFeedbackSerializer, DonationClaimSerializer
+from .models import Donation, DonationFeedback, DonationClaim, Warning
+from .serializers import DonationSerializer, DonationFeedbackSerializer, DonationClaimSerializer, WarningSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db import transaction
 from django.db.models import Avg, Count, Q
@@ -320,6 +320,14 @@ class AdminDonorActionView(generics.GenericAPIView):
             donor = User.objects.get(id=donor_id, role='donor')
             
             if action == 'warn':
+                # Create a warning record
+                message = request.data.get('message', 'You have received a warning from the admin.')
+                warning = Warning.objects.create(
+                    user=donor,
+                    message=message,
+                    is_read=False
+                )
+                # Increment warning count
                 donor.warning_count = (donor.warning_count or 0) + 1
                 donor.save()
                 return Response({'status': 'warned'})
@@ -345,4 +353,91 @@ class AdminDonorActionView(generics.GenericAPIView):
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class DonorWarningsView(generics.ListAPIView):
+    serializer_class = WarningSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Warning.objects.filter(
+            user=self.request.user,
+            is_read=False
+        ).order_by('-created_at')
+        print('Found warnings:', list(queryset.values()))  # Debug log
+        print('User ID:', self.request.user.id)  # Debug log
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        print('Returning warnings:', serializer.data)  # Debug log
+        return Response({
+            'warnings': serializer.data
+        })
+
+class AdminSendWarningView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    serializer_class = WarningSerializer
+
+    def create(self, request, *args, **kwargs):
+        donor_id = kwargs.get('donor_id')
+        try:
+            donor = User.objects.get(id=donor_id, role='donor')
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Donor not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        message = request.data.get('message')
+        if not message:
+            return Response(
+                {'error': 'Warning message is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Debug logging
+        print('Creating warning for donor:', donor.id)
+        print('Warning message:', message)
+
+        # Create the warning
+        warning = Warning.objects.create(
+            user=donor,
+            message=message,
+            is_read=False
+        )
+
+        # Debug logging
+        print('Created warning:', warning.__dict__)
+        print('Warning is_read:', warning.is_read)
+
+        # Increment warning count
+        donor.warning_count = (donor.warning_count or 0) + 1
+        donor.save()
+
+        # Debug logging
+        print('Updated donor warning count:', donor.warning_count)
+
+        serializer = self.get_serializer(warning)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class WarningDismissView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = WarningSerializer
+
+    def post(self, request, *args, **kwargs):
+        warning_id = kwargs.get('warning_id')
+        try:
+            warning = Warning.objects.get(
+                id=warning_id,
+                user=request.user
+            )
+            warning.is_read = True
+            warning.save()
+            return Response({'status': 'dismissed'})
+        except Warning.DoesNotExist:
+            return Response(
+                {'error': 'Warning not found'},
+                status=status.HTTP_404_NOT_FOUND
             )
