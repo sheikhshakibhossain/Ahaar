@@ -1,46 +1,49 @@
 import { api } from './api';
 
 export interface BadDonor {
-    id: string;
-    username: string;
-    email: string;
+    id: number;
     first_name: string;
     last_name: string;
+    email: string;
     donation_count: number;
     average_rating: number;
+    warning_count: number;
     feedback_count: number;
     is_banned: boolean;
-    warning_count?: number;
 }
 
 export interface BadDonorsResponse {
-    donors: BadDonor[];
-    total: number;
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: BadDonor[];
 }
 
 export const adminService = {
-    getBadDonors: async (params: any): Promise<BadDonorsResponse> => {
+    async getBadDonors(params: {
+        page: number;
+        page_size: number;
+        min_feedback: number;
+        sort_by: 'rating' | 'feedback';
+        search?: string;
+    }): Promise<BadDonorsResponse> {
         const response = await api.get('/api/admin/bad-donors/', { params });
-        // Map paginated response to expected format
-        return {
-            donors: response.data.results || [],
-            total: response.data.count || 0,
-        };
+        return response.data;
     },
 
-    warnDonor: async (donorId: string): Promise<void> => {
-        await api.post(`/api/admin/donors/${donorId}/warn/`);
-    },
-
-    banDonor: async (donorId: string): Promise<void> => {
+    async banDonor(donorId: number): Promise<void> {
         await api.post(`/api/admin/donors/${donorId}/ban/`);
     },
 
-    unbanDonor: async (donorId: string): Promise<void> => {
+    async unbanDonor(donorId: number): Promise<void> {
         await api.post(`/api/admin/donors/${donorId}/unban/`);
     },
 
-    getDonorWarnings: async (donorId: string): Promise<{ id: string; message: string; timestamp: string }[]> => {
+    async warnDonor(donorId: number): Promise<void> {
+        await api.post(`/api/admin/donors/${donorId}/warn/`);
+    },
+
+    async getDonorWarnings(donorId: number): Promise<{ id: string; message: string; timestamp: string }[]> {
         const response = await api.get(`/api/admin/donors/${donorId}/warnings`);
         return response.data;
     }
