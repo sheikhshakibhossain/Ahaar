@@ -16,6 +16,7 @@ import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { api } from '../../services/api';
 import { Donation } from '../../types/donation';
 import { AdminWarningAlert } from '../../components/donor/AdminWarningAlert';
+import { User } from '../../types/auth';
 
 const DonorDashboard: React.FC = () => {
     const [stats, setStats] = useState({
@@ -27,17 +28,19 @@ const DonorDashboard: React.FC = () => {
     const [donations, setDonations] = useState<Donation[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const [donationsResponse, userResponse] = await Promise.all([
                     api.get<Donation[]>('/api/donations/'),
-                    api.get('/api/me/')
+                    api.get<User>('/api/me/')
                 ]);
 
                 const donationsData = donationsResponse.data;
                 setDonations(donationsData);
+                setUser(userResponse.data);
 
                 // Calculate statistics
                 setStats({
@@ -87,6 +90,47 @@ const DonorDashboard: React.FC = () => {
                         Manage your donations and track their status
                     </Typography>
                 </Box>
+
+                {/* Personal Information */}
+                <Paper sx={{ p: 3, mb: 4 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Personal Information
+                    </Typography>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                                Name
+                            </Typography>
+                            <Typography variant="body1">
+                                {user?.first_name} {user?.last_name}
+                            </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                                Email
+                            </Typography>
+                            <Typography variant="body1">
+                                {user?.email}
+                            </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                                Phone Number
+                            </Typography>
+                            <Typography variant="body1">
+                                {user?.phone_number || 'Not provided'}
+                            </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                                Address
+                            </Typography>
+                            <Typography variant="body1">
+                                {user?.address || 'Not provided'}
+                            </Typography>
+                        </Grid>
+                    </Grid>
+                </Paper>
 
                 {/* Statistics Cards */}
                 <Grid container spacing={3} mb={4}>
