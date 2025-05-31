@@ -21,6 +21,8 @@ class User(AbstractUser):
     )
     phone_number = models.CharField(max_length=15, blank=True)
     address = models.TextField(blank=True)
+    is_banned = models.BooleanField(default=False)
+    warning_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

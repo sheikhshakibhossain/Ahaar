@@ -2,14 +2,21 @@ from django.shortcuts import render
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
-from .serializers import UserRegistrationSerializer, UserSerializer
+from rest_framework.pagination import PageNumberPagination
+from .serializers import (
+    UserRegistrationSerializer,
+    UserSerializer,
+    CustomTokenObtainPairSerializer
+)
 from rest_framework.decorators import action
 from rest_framework.viewsets import ModelViewSet
 from .models import Donation, DonationFeedback, DonationClaim
 from .serializers import DonationSerializer, DonationFeedbackSerializer, DonationClaimSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db import transaction
+from django.db.models import Avg, Count, Q
 
 User = get_user_model()
 
@@ -213,3 +220,129 @@ class DonationFeedbackViewSet(ModelViewSet):
         
     def perform_create(self, serializer):
         serializer.save(recipient=self.request.user)
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        # Add user data to the response
+        user = self.user
+        data['user'] = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': user.role,
+        }
+        return data
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+class AdminBadDonorsView(generics.ListAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = UserSerializer
+    pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        try:
+            min_feedback = int(self.request.query_params.get('min_feedback', 3))
+            max_avg_rating = float(self.request.query_params.get('max_avg_rating', 2.5))
+            sort_by = self.request.query_params.get('sort_by', 'rating')
+            search = self.request.query_params.get('search', '')
+
+            # First get all donors with their feedback counts
+            queryset = User.objects.filter(role='donor').annotate(
+                donation_count=Count('donations', filter=~Q(donations__status='cancelled')),
+                feedback_count=Count('donations__feedbacks'),
+                average_rating=Avg('donations__feedbacks__rating')
+            )
+
+            # Filter by minimum feedback count and maximum average rating
+            queryset = queryset.filter(
+                feedback_count__gte=min_feedback,
+                average_rating__lte=max_avg_rating
+            )
+
+            # Apply search filter if provided
+            if search:
+                queryset = queryset.filter(
+                    Q(username__icontains=search) |
+                    Q(email__icontains=search) |
+                    Q(first_name__icontains=search) |
+                    Q(last_name__icontains=search)
+                )
+
+            # Sort by rating or feedback count
+            if sort_by == 'rating':
+                queryset = queryset.order_by('average_rating')
+            else:
+                queryset = queryset.order_by('-feedback_count')
+
+            # Debug logging
+            print("QuerySet:", queryset.query)
+            print("First donor in queryset:", queryset.first().__dict__ if queryset.first() else None)
+            return queryset
+        except Exception as e:
+            print(f"Error in get_queryset: {str(e)}")
+            return User.objects.none()
+
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                # Debug logging
+                print("Serialized data:", serializer.data)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"Error in list: {str(e)}")
+            return Response(
+                {'error': 'An error occurred while fetching donors'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class AdminDonorActionView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, donor_id, action):
+        try:
+            donor = User.objects.get(id=donor_id, role='donor')
+            
+            if action == 'warn':
+                donor.warning_count = (donor.warning_count or 0) + 1
+                donor.save()
+                return Response({'status': 'warned'})
+            elif action == 'ban':
+                donor.is_banned = True
+                donor.save()
+                return Response({'status': 'banned'})
+            elif action == 'unban':
+                donor.is_banned = False
+                donor.save()
+                return Response({'status': 'unbanned'})
+            else:
+                return Response(
+                    {'error': 'Invalid action'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Donor not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

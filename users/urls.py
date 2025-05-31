@@ -1,6 +1,14 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import RegisterView, UserDetailView, DonationViewSet, DonationFeedbackViewSet
+from rest_framework_simplejwt.views import TokenRefreshView
+from .views import (
+    RegisterView,
+    UserDetailView,
+    DonationViewSet,
+    DonationFeedbackViewSet,
+    CustomTokenObtainPairView,
+    AdminBadDonorsView,
+    AdminDonorActionView
+)
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -9,7 +17,11 @@ router.register(r'feedbacks', DonationFeedbackViewSet, basename='feedback')
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
-    path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('me/', UserDetailView.as_view(), name='user_detail'),
+    
+    # Admin endpoints
+    path('admin/bad-donors/', AdminBadDonorsView.as_view(), name='admin_bad_donors'),
+    path('admin/donors/<int:donor_id>/<str:action>/', AdminDonorActionView.as_view(), name='admin_donor_action'),
 ] + router.urls 
