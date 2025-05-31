@@ -1,59 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import { Alert, AlertTitle, IconButton, Collapse } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import React, { useEffect, useState } from 'react';
+import { Alert, AlertTitle, Box, Button } from '@mui/material';
 import { api } from '../../services/api';
 
 interface Warning {
-    id: string;
+    id: number;
     message: string;
-    timestamp: string;
+    created_at: string;
+    is_read: boolean;
 }
 
 export const AdminWarningAlert: React.FC = () => {
     const [warnings, setWarnings] = useState<Warning[]>([]);
-    const [open, setOpen] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchWarnings = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get<{ warnings: Warning[] }>('/api/donor/warnings/');
+            console.log('Fetched warnings:', response.data); // Debug log
+            setWarnings(response.data.warnings || []);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching warnings:', err);
+            setError('Failed to fetch warnings');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchWarnings = async () => {
-            try {
-                const response = await api.get<{ warnings: Warning[] }>('/api/donor/warnings');
-                setWarnings(response.data.warnings || []);
-            } catch (error) {
-                console.error('Error fetching warnings:', error);
-                setWarnings([]);
-            }
-        };
-
         fetchWarnings();
+        // Set up polling to check for new warnings every 30 seconds
+        const interval = setInterval(fetchWarnings, 30000);
+        return () => clearInterval(interval);
     }, []);
 
-    if (!warnings || warnings.length === 0) {
+    const handleDismiss = async (warningId: number) => {
+        try {
+            await api.post(`/api/donor/warnings/${warningId}/dismiss/`);
+            setWarnings(warnings.filter(w => w.id !== warningId));
+        } catch (err) {
+            console.error('Error dismissing warning:', err);
+        }
+    };
+
+    if (loading) {
+        return null;
+    }
+
+    if (error) {
+        return null;
+    }
+
+    if (warnings.length === 0) {
         return null;
     }
 
     return (
-        <Collapse in={open}>
-            <Alert
-                severity="warning"
-                sx={{ mb: 2 }}
-                action={
-                    <IconButton
-                        aria-label="close"
-                        color="inherit"
-                        size="small"
-                        onClick={() => setOpen(false)}
-                    >
-                        <CloseIcon fontSize="inherit" />
-                    </IconButton>
-                }
-            >
-                <AlertTitle>Admin Warning</AlertTitle>
-                {warnings.map((warning) => (
-                    <div key={warning.id}>
-                        ⚠️ {warning.message}
-                    </div>
-                ))}
-            </Alert>
-        </Collapse>
+        <Box sx={{ mb: 2 }}>
+            {warnings.map((warning) => (
+                <Alert
+                    key={warning.id}
+                    severity="warning"
+                    sx={{ mb: 1 }}
+                    action={
+                        <Button color="inherit" size="small" onClick={() => handleDismiss(warning.id)}>
+                            Dismiss
+                        </Button>
+                    }
+                >
+                    <AlertTitle>Admin Warning ⚠️</AlertTitle>
+                    {warning.message}
+                </Alert>
+            ))}
+        </Box>
     );
 }; 
