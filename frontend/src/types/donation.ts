@@ -8,6 +8,8 @@ export interface Donation {
     category: string;
     status: string;
     status_display: string;
+    created_at: string;
+    updated_at: string;
     image?: string;
     location?: {
         lat: number;
