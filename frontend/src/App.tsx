@@ -1,19 +1,47 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { ThemeProvider, CssBaseline, Box, CircularProgress } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginForm } from './components/auth/LoginForm';
 import { RegisterForm } from './components/auth/RegisterForm';
-import { DonorDashboard } from './pages/donor/DonorDashboard';
+import DonorDashboard from './pages/donor/DonorDashboard';
 import { CreateDonation } from './pages/donor/CreateDonation';
 import { DonationHistory } from './pages/donor/DonationHistory';
 import { CreateDonationPage } from './pages/donor/CreateDonationPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { LandingPage } from './pages/LandingPage';
+import LandingPage from './pages/LandingPage';
 import { theme } from './theme';
 import { RecipientDashboard } from './pages/recipient/RecipientDashboard';
 import { NearbyDonationsPage } from './pages/recipient/NearbyDonationsPage';
 import { RecipientHistory } from './pages/recipient/RecipientHistory';
+import AdminPanel from './pages/admin/AdminPanel';
+
+// Update RootRedirect to handle authenticated users
+const RootRedirect: React.FC = () => {
+    const { user, loading } = useAuth();
+    
+    if (loading) {
+        return (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+                <CircularProgress />
+            </Box>
+        );
+    }
+    
+    if (user) {
+        if (user.role === 'donor') {
+            return <Navigate to="/dashboard" replace />;
+        }
+        if (user.role === 'recipient') {
+            return <Navigate to="/recipient-dashboard" replace />;
+        }
+        if (user.role === 'admin') {
+            return <Navigate to="/admin" replace />;
+        }
+    }
+    
+    return <LandingPage />;
+};
 
 function App() {
     return (
@@ -22,7 +50,7 @@ function App() {
             <AuthProvider>
                 <Routes>
                     {/* Public Routes */}
-                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/" element={<RootRedirect />} />
                     <Route path="/login" element={<LoginForm />} />
                     <Route path="/register" element={<RegisterForm />} />
                     
@@ -78,6 +106,16 @@ function App() {
                         } 
                     />
 
+                    {/* Admin Routes */}
+                    <Route 
+                        path="/admin" 
+                        element={
+                            <ProtectedRoute requiredRole="admin">
+                                <AdminPanel />
+                            </ProtectedRoute>
+                        } 
+                    />
+
                     {/* Catch all route */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
@@ -85,24 +123,5 @@ function App() {
         </ThemeProvider>
     );
 }
-
-// Update RootRedirect to handle authenticated users
-const RootRedirect: React.FC = () => {
-    const { user } = useAuth();
-    
-    if (!user) {
-        return <LandingPage />;
-    }
-
-    if (user.role === 'donor') {
-        return <Navigate to="/dashboard" replace />;
-    }
-
-    if (user.role === 'recipient') {
-        return <Navigate to="/recipient-dashboard" replace />;
-    }
-
-    return <Navigate to="/" replace />;
-};
 
 export default App;

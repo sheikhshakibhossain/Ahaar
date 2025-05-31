@@ -1,240 +1,167 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    Card,
-    CardContent,
+    Container,
+    Grid,
+    Paper,
     Typography,
     Box,
     CircularProgress,
     Alert,
-    Stack,
+    Card,
+    CardContent,
+    CardMedia,
     Chip,
-    Avatar,
 } from '@mui/material';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
-import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Donation } from '../../types/donation';
-import { format } from 'date-fns';
+import { AdminWarningAlert } from '../../components/donor/AdminWarningAlert';
 
-export const DonorDashboard: React.FC = () => {
-    const { user } = useAuth();
-    const [stats, setStats] = React.useState({
+const DonorDashboard: React.FC = () => {
+    const [stats, setStats] = useState({
         totalDonations: 0,
+        activeDonations: 0,
         completedDonations: 0,
-        trustScore: 100,
+        cancelledDonations: 0,
     });
-    const [donations, setDonations] = React.useState<Donation[]>([]);
-    const [loading, setLoading] = React.useState(true);
-    const [error, setError] = React.useState<string | null>(null);
+    const [donations, setDonations] = useState<Donation[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    React.useEffect(() => {
-        const fetchDonationStats = async () => {
+    useEffect(() => {
+        const fetchData = async () => {
             try {
-                setLoading(true);
                 const [donationsResponse, userResponse] = await Promise.all([
                     api.get<Donation[]>('/api/donations/'),
                     api.get('/api/me/')
                 ]);
-                
+
                 const donationsData = donationsResponse.data;
-                const userData = userResponse.data;
+                setDonations(donationsData);
 
                 // Calculate statistics
-                const totalDonations = donationsData.length;
-                const completedDonations = donationsData.filter(d => 
-                    d.status === 'claimed' || d.status === 'expired' || d.status === 'cancelled'
-                ).length;
-
                 setStats({
-                    totalDonations,
-                    completedDonations,
-                    trustScore: userData.penalty_score ? 100 - userData.penalty_score : 100,
+                    totalDonations: donationsData.length,
+                    activeDonations: donationsData.filter(d => d.status === 'available').length,
+                    completedDonations: donationsData.filter(d => d.status === 'completed').length,
+                    cancelledDonations: donationsData.filter(d => d.status === 'cancelled').length,
                 });
-                
-                setDonations(donationsData);
             } catch (err) {
-                setError('Failed to load donation statistics');
-                console.error('Error fetching donation stats:', err);
+                setError('Failed to fetch dashboard data');
+                console.error('Error fetching dashboard data:', err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchDonationStats();
+        fetchData();
     }, []);
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'available':
-                return 'success';
-            case 'claimed':
-                return 'info';
-            case 'expired':
-            case 'cancelled':
-                return 'error';
-            default:
-                return 'default';
-        }
-    };
+    if (loading) {
+        return (
+            <DashboardLayout title="Donor Dashboard">
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+                    <CircularProgress />
+                </Box>
+            </DashboardLayout>
+        );
+    }
+
+    if (error) {
+        return (
+            <DashboardLayout title="Donor Dashboard">
+                <Alert severity="error">{error}</Alert>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout title="Donor Dashboard">
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-            
-            <Stack spacing={3}>
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-                    <Card sx={{ flex: 1 }}>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Total Donations
-                            </Typography>
-                            {loading ? (
-                                <CircularProgress size={24} />
-                            ) : (
-                                <Typography variant="h5">
-                                    {stats.totalDonations}
-                                </Typography>
-                            )}
-                        </CardContent>
-                    </Card>
-                    <Card sx={{ flex: 1 }}>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Completed Donations
-                            </Typography>
-                            {loading ? (
-                                <CircularProgress size={24} />
-                            ) : (
-                                <Typography variant="h5">
-                                    {stats.completedDonations}
-                                </Typography>
-                            )}
-                        </CardContent>
-                    </Card>
-                    <Card sx={{ flex: 1 }}>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Trust Score
-                            </Typography>
-                            {loading ? (
-                                <CircularProgress size={24} />
-                            ) : (
-                                <Box position="relative" display="inline-flex">
-                                    <CircularProgress
-                                        variant="determinate"
-                                        value={stats.trustScore}
-                                        color={stats.trustScore < 50 ? "error" : "success"}
-                                    />
-                                    <Box
-                                        top={0}
-                                        left={0}
-                                        bottom={0}
-                                        right={0}
-                                        position="absolute"
-                                        display="flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                    >
-                                        <Typography variant="caption" component="div" color="textSecondary">
-                                            {stats.trustScore}%
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            )}
-                            <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                                Based on recipient feedback and donation history
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Stack>
-                
-                {/* Donations Grid */}
-                <Box>
-                    <Typography variant="h6" sx={{ mb: 3 }}>
-                        Your Donations
+            <Container maxWidth="lg">
+                <AdminWarningAlert />
+                <Box mb={4}>
+                    <Typography variant="h4" gutterBottom>
+                        Welcome to Your Dashboard
                     </Typography>
-                    {loading ? (
-                        <Box display="flex" justifyContent="center" p={3}>
-                            <CircularProgress />
-                        </Box>
-                    ) : donations.length === 0 ? (
-                        <Box p={3} textAlign="center">
-                            <Typography color="textSecondary">
-                                You haven't made any donations yet.
-                            </Typography>
-                        </Box>
-                    ) : (
-                        <Stack 
-                            direction={{ xs: 'column', sm: 'row' }} 
-                            spacing={3}
-                            sx={{ 
-                                display: 'grid',
-                                gridTemplateColumns: {
-                                    xs: '1fr',
-                                    sm: 'repeat(2, 1fr)',
-                                    md: 'repeat(3, 1fr)'
-                                },
-                                gap: 3
-                            }}
-                        >
-                            {donations.map((donation) => (
-                                <Card key={donation.id}>
+                    <Typography variant="body1" color="text.secondary">
+                        Manage your donations and track their status
+                    </Typography>
+                </Box>
+
+                {/* Statistics Cards */}
+                <Grid container spacing={3} mb={4}>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                            <Typography variant="h6">Total Donations</Typography>
+                            <Typography variant="h4">{stats.totalDonations}</Typography>
+                        </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                            <Typography variant="h6">Active Donations</Typography>
+                            <Typography variant="h4">{stats.activeDonations}</Typography>
+                        </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                            <Typography variant="h6">Completed</Typography>
+                            <Typography variant="h4">{stats.completedDonations}</Typography>
+                        </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                            <Typography variant="h6">Cancelled</Typography>
+                            <Typography variant="h4">{stats.cancelledDonations}</Typography>
+                        </Paper>
+                    </Grid>
+                </Grid>
+
+                {/* Recent Donations */}
+                <Box mb={4}>
+                    <Typography variant="h5" gutterBottom>
+                        Recent Donations
+                    </Typography>
+                    <Grid container spacing={3}>
+                        {donations.map((donation) => (
+                            <Grid item xs={12} sm={6} md={4} key={donation.id}>
+                                <Card>
+                                    {donation.image && (
+                                        <CardMedia
+                                            component="img"
+                                            height="140"
+                                            image={donation.image}
+                                            alt={donation.title}
+                                        />
+                                    )}
                                     <CardContent>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
-                                            {donation.image ? (
-                                                <Avatar 
-                                                    src={donation.image} 
-                                                    alt={donation.title}
-                                                    sx={{ width: 120, height: 120, mb: 2 }}
-                                                />
-                                            ) : (
-                                                <Avatar 
-                                                    sx={{ 
-                                                        width: 120, 
-                                                        height: 120, 
-                                                        mb: 2,
-                                                        bgcolor: 'primary.main',
-                                                        fontSize: '3rem'
-                                                    }}
-                                                >
-                                                    {donation.title.charAt(0)}
-                                                </Avatar>
-                                            )}
-                                            <Typography variant="h6" align="center" gutterBottom>
-                                                {donation.title}
-                                            </Typography>
-                                            <Chip 
-                                                label={donation.status_display} 
-                                                color={getStatusColor(donation.status)}
-                                                size="small"
-                                                sx={{ mb: 1 }}
+                                        <Typography variant="h6" gutterBottom>
+                                            {donation.title}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                                            {donation.description}
+                                        </Typography>
+                                        <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
+                                            <Chip
+                                                label={donation.status_display}
+                                                color={
+                                                    donation.status === 'available'
+                                                        ? 'success'
+                                                        : donation.status === 'completed'
+                                                        ? 'primary'
+                                                        : 'error'
+                                                }
                                             />
-                                        </Box>
-                                        
-                                        <Box sx={{ mt: 2 }}>
-                                            <Typography variant="body2" color="textSecondary" gutterBottom>
-                                                Category: {donation.category}
-                                            </Typography>
-                                            <Typography variant="body2" color="textSecondary" gutterBottom>
-                                                Quantity: {donation.quantity_taken > 0 ? (
-                                                    <Typography component="span" variant="body2">
-                                                        {donation.quantity_taken}/{donation.quantity} taken
-                                                    </Typography>
-                                                ) : (
-                                                    donation.quantity
-                                                )}
-                                            </Typography>
-                                            <Typography variant="body2" color="textSecondary">
-                                                Expires: {format(new Date(donation.expiry_date), 'MMM d, yyyy')}
+                                            <Typography variant="body2">
+                                                Quantity: {donation.quantity}
                                             </Typography>
                                         </Box>
                                     </CardContent>
                                 </Card>
-                            ))}
-                        </Stack>
-                    )}
+                            </Grid>
+                        ))}
+                    </Grid>
                 </Box>
-            </Stack>
+            </Container>
         </DashboardLayout>
     );
 };
