@@ -4,9 +4,11 @@ export interface User {
     email: string;
     first_name: string;
     last_name: string;
-    role: 'donor' | 'recipient';
+    role: 'donor' | 'recipient' | 'admin';
     phone_number?: string;
     address?: string;
+    is_banned?: boolean;
+    warning_count?: number;
 }
 
 export interface LoginCredentials {
@@ -29,4 +31,5 @@ export interface RegisterData {
 export interface AuthResponse {
     access: string;
     refresh: string;
+    user: User;
 } 
