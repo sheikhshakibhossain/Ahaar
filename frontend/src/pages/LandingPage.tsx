@@ -17,7 +17,7 @@ interface Donation {
   };
 }
 
-export const LandingPage: React.FC = () => {
+const LandingPage: React.FC = () => {
     const donationsList: Donation[] = []; // Replace with actual donations data
 
     return (
@@ -106,10 +106,10 @@ export const LandingPage: React.FC = () => {
                                 </span>
                             </Link>
                             <Link
-                                to="/about"
+                                to="/login"
                                 className="btn-secondary flex items-center justify-center"
                             >
-                                Learn More
+                                Login
                             </Link>
                         </motion.div>
 
@@ -294,4 +294,6 @@ export const LandingPage: React.FC = () => {
             <DonationList donations={donationsList} />
         </div>
     );
-}; 
+};
+
+export default LandingPage; 
