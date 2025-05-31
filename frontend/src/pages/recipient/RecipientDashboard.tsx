@@ -37,17 +37,7 @@ import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
 import { api } from '../../services/api';
 import { Donation } from '../../types/donation';
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: 'donor' | 'recipient';
-  phone_number?: string;
-  address?: string;
-}
+import { User } from '../../types/auth';
 
 interface Request {
   id: string;
@@ -115,9 +105,9 @@ export const RecipientDashboard: React.FC = () => {
           id: donation.id.toString(),
           donationTitle: donation.title,
           status: 'completed', // All claimed donations are considered completed
-          createdAt: donation.created_at,
-          updatedAt: donation.updated_at || donation.created_at,
-          quantity: donation.quantity || 1,
+          createdAt: donation.created_at || new Date().toISOString(),
+          updatedAt: donation.updated_at || donation.created_at || new Date().toISOString(),
+          quantity: typeof donation.quantity === 'string' ? parseInt(donation.quantity) : donation.quantity,
           donor: {
             name: donation.donor?.name || 'Anonymous Donor'
           }
@@ -220,8 +210,48 @@ export const RecipientDashboard: React.FC = () => {
               Here's what's happening with your donations
             </Typography>
           </Box>
-          
         </Box>
+
+        {/* Personal Information */}
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Personal Information
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Name
+              </Typography>
+              <Typography variant="body1">
+                {user?.first_name} {user?.last_name}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Email
+              </Typography>
+              <Typography variant="body1">
+                {user?.email}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Phone Number
+              </Typography>
+              <Typography variant="body1">
+                {user?.phone_number || 'Not provided'}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Address
+              </Typography>
+              <Typography variant="body1">
+                {user?.address || 'Not provided'}
+              </Typography>
+            </Grid>
+          </Grid>
+        </Paper>
 
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
