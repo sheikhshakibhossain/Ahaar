@@ -19,6 +19,10 @@ import {
     Alert,
     Tabs,
     Tab,
+    Card,
+    CardContent,
+    Grid,
+    useTheme,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -27,6 +31,12 @@ import {
     Logout as LogoutIcon,
     LockOpen as UnbanIcon,
     Notifications as NotificationsIcon,
+    AdminPanelSettings as AdminIcon,
+    People as PeopleIcon,
+    Security as SecurityIcon,
+    TrendingDown as TrendingDownIcon,
+    CheckCircle as CheckCircleIcon,
+    Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { adminService, BadDonor } from '../../services/admin';
@@ -36,7 +46,8 @@ import { WarningDialog } from '../../components/admin/WarningDialog';
 import { CrisisAlertManager } from '../../components/admin/CrisisAlertManager';
 
 const AdminPanel: React.FC = () => {
-    const { logout } = useAuth();
+    const theme = useTheme();
+    const { logout, user } = useAuth();
     const navigate = useNavigate();
     const [donors, setDonors] = useState<BadDonor[]>([]);
     const [loading, setLoading] = useState(true);
@@ -135,6 +146,14 @@ const AdminPanel: React.FC = () => {
         setPage(0);
     };
 
+    // Calculate statistics
+    const stats = {
+        totalDonors: totalDonors,
+        bannedDonors: donors.filter(d => d.is_banned).length,
+        warnedDonors: donors.filter(d => (d.warning_count || 0) > 0).length,
+        lowRatedDonors: donors.filter(d => d.average_rating < 2.5).length,
+    };
+
     if (loading && donors.length === 0) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -144,29 +163,194 @@ const AdminPanel: React.FC = () => {
     }
 
     return (
-        <Container maxWidth="lg">
-            <Box mb={4} display="flex" justifyContent="space-between" alignItems="center">
-                <Box>
-                    <Typography variant="h4" gutterBottom>
-                        Admin Panel
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary">
-                        Manage donors and monitor platform activity
-                    </Typography>
+        <Container maxWidth="xl">
+            {/* Hero Section */}
+            <Box 
+                sx={{ 
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderRadius: 3,
+                    p: 4,
+                    mb: 4,
+                    color: 'white',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                        opacity: 0.3,
+                    }
+                }}
+            >
+                <Box position="relative" zIndex={1} display="flex" justifyContent="space-between" alignItems="center">
+                    <Box>
+                        <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
+                            Admin Dashboard 🛡️
+                        </Typography>
+                        <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
+                            Welcome back, {user?.first_name}! Monitor and manage platform activity
+                        </Typography>
+                    </Box>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        startIcon={<LogoutIcon />}
+                        onClick={handleLogout}
+                        sx={{ 
+                            borderColor: 'rgba(255,255,255,0.3)',
+                            color: 'white',
+                            '&:hover': { 
+                                borderColor: 'white',
+                                bgcolor: 'rgba(255,255,255,0.1)'
+                            }
+                        }}
+                    >
+                        Logout
+                    </Button>
                 </Box>
-                <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<LogoutIcon />}
-                    onClick={handleLogout}
-                >
-                    Logout
-                </Button>
             </Box>
 
+            {/* Statistics Cards */}
+            <Grid container spacing={3} mb={4}>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card 
+                        sx={{ 
+                            p: 3, 
+                            textAlign: 'center',
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            color: 'white',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: -50,
+                                right: -50,
+                                width: 100,
+                                height: 100,
+                                borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.1)',
+                            }
+                        }}
+                    >
+                        <CardContent>
+                            <PeopleIcon sx={{ fontSize: 40, mb: 2, opacity: 0.8 }} />
+                            <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                {stats.totalDonors}
+                            </Typography>
+                            <Typography variant="h6">Total Donors</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card 
+                        sx={{ 
+                            p: 3, 
+                            textAlign: 'center',
+                            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                            color: 'white',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: -50,
+                                right: -50,
+                                width: 100,
+                                height: 100,
+                                borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.1)',
+                            }
+                        }}
+                    >
+                        <CardContent>
+                            <BlockIcon sx={{ fontSize: 40, mb: 2, opacity: 0.8 }} />
+                            <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                {stats.bannedDonors}
+                            </Typography>
+                            <Typography variant="h6">Banned Donors</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card 
+                        sx={{ 
+                            p: 3, 
+                            textAlign: 'center',
+                            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                            color: 'white',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: -50,
+                                right: -50,
+                                width: 100,
+                                height: 100,
+                                borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.1)',
+                            }
+                        }}
+                    >
+                        <CardContent>
+                            <WarningIcon sx={{ fontSize: 40, mb: 2, opacity: 0.8 }} />
+                            <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                {stats.warnedDonors}
+                            </Typography>
+                            <Typography variant="h6">Warned Donors</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card 
+                        sx={{ 
+                            p: 3, 
+                            textAlign: 'center',
+                            background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                            color: 'white',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: -50,
+                                right: -50,
+                                width: 100,
+                                height: 100,
+                                borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.1)',
+                            }
+                        }}
+                    >
+                        <CardContent>
+                            <TrendingDownIcon sx={{ fontSize: 40, mb: 2, opacity: 0.8 }} />
+                            <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                {stats.lowRatedDonors}
+                            </Typography>
+                            <Typography variant="h6">Low Rated</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+            </Grid>
+
             {/* Tab Navigation */}
-            <Paper sx={{ mb: 3 }}>
-                <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+            <Card sx={{ mb: 4 }}>
+                <Tabs 
+                    value={activeTab} 
+                    onChange={(_, newValue) => setActiveTab(newValue)}
+                    sx={{
+                        '& .MuiTab-root': {
+                            minHeight: 64,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                        }
+                    }}
+                >
                     <Tab 
                         icon={<WarningIcon />} 
                         label="Bad Donors" 
@@ -178,13 +362,15 @@ const AdminPanel: React.FC = () => {
                         iconPosition="start"
                     />
                 </Tabs>
-            </Paper>
+            </Card>
 
             {/* Bad Donors Section */}
             {activeTab === 0 && (
-                <Paper sx={{ p: 3, mb: 4 }}>
+                <Card sx={{ p: 3, mb: 4 }}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                        <Typography variant="h5">Bad Donors</Typography>
+                        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                            Bad Donors Management
+                        </Typography>
                         <Box display="flex" gap={2}>
                             <TextField
                                 size="small"
@@ -217,17 +403,17 @@ const AdminPanel: React.FC = () => {
 
                     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-                    <TableContainer>
+                    <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
                         <Table>
                             <TableHead>
-                                <TableRow>
-                                    <TableCell>Name</TableCell>
-                                    <TableCell>Email</TableCell>
-                                    <TableCell>Donations</TableCell>
-                                    <TableCell>Average Rating</TableCell>
-                                    <TableCell>Feedback Count</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell>Actions</TableCell>
+                                <TableRow sx={{ bgcolor: 'grey.50' }}>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>Donations</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>Average Rating</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>Feedback Count</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -243,7 +429,9 @@ const AdminPanel: React.FC = () => {
                                     >
                                         <TableCell>
                                             <Box display="flex" alignItems="center" gap={1}>
-                                                {donor.first_name} {donor.last_name}
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                                    {donor.first_name} {donor.last_name}
+                                                </Typography>
                                                 {donor.is_banned && (
                                                     <Chip
                                                         label="BANNED"
@@ -260,13 +448,16 @@ const AdminPanel: React.FC = () => {
                                             <Chip
                                                 label={donor.average_rating.toFixed(1)}
                                                 color={donor.average_rating < 2.5 ? 'error' : 'warning'}
+                                                variant="outlined"
                                             />
                                         </TableCell>
                                         <TableCell>{donor.feedback_count}</TableCell>
                                         <TableCell>
                                             <Chip
+                                                icon={donor.is_banned ? <BlockIcon /> : <CheckCircleIcon />}
                                                 label={donor.is_banned ? 'Banned' : 'Active'}
                                                 color={donor.is_banned ? 'error' : 'success'}
+                                                size="small"
                                             />
                                         </TableCell>
                                         <TableCell>
@@ -277,6 +468,7 @@ const AdminPanel: React.FC = () => {
                                                         startIcon={<UnbanIcon />}
                                                         onClick={() => handleUnbanDonor(donor.id)}
                                                         color="success"
+                                                        variant="outlined"
                                                     >
                                                         Unban
                                                     </Button>
@@ -286,6 +478,7 @@ const AdminPanel: React.FC = () => {
                                                             size="small"
                                                             startIcon={<WarningIcon />}
                                                             onClick={() => handleWarnDonor(donor.id)}
+                                                            variant="outlined"
                                                         >
                                                             Warn
                                                         </Button>
@@ -294,6 +487,7 @@ const AdminPanel: React.FC = () => {
                                                             startIcon={<BlockIcon />}
                                                             onClick={() => handleBanDonor(donor.id)}
                                                             color="error"
+                                                            variant="outlined"
                                                         >
                                                             Ban
                                                         </Button>
@@ -314,8 +508,9 @@ const AdminPanel: React.FC = () => {
                         onPageChange={handleChangePage}
                         rowsPerPage={rowsPerPage}
                         onRowsPerPageChange={handleChangeRowsPerPage}
+                        sx={{ mt: 2 }}
                     />
-                </Paper>
+                </Card>
             )}
 
             {/* Crisis Alerts Section */}
