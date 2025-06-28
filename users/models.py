@@ -46,6 +46,68 @@ class Warning(models.Model):
     def __str__(self):
         return f"Warning for {self.user.username}: {self.message[:50]}..."
 
+class UserAlertDismiss(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dismissed_alerts')
+    alert = models.ForeignKey('CrisisAlert', on_delete=models.CASCADE, related_name='dismissed_by_users')
+    dismissed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'alert']
+        ordering = ['-dismissed_at']
+
+    def __str__(self):
+        return f"{self.user.username} dismissed {self.alert.title}"
+
+class CrisisAlert(models.Model):
+    SEVERITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    )
+    
+    TYPE_CHOICES = (
+        ('natural_disaster', 'Natural Disaster'),
+        ('weather_alert', 'Weather Alert'),
+        ('health_crisis', 'Health Crisis'),
+        ('security_alert', 'Security Alert'),
+        ('system_alert', 'System Alert'),
+        ('admin_alert', 'Admin Alert'),
+    )
+    
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    alert_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='admin_alert')
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='medium')
+    location = models.JSONField(default=dict, blank=True)  # For location-specific alerts
+    affected_areas = models.JSONField(default=list, blank=True)  # List of affected areas
+    is_active = models.BooleanField(default=True)
+    is_system_generated = models.BooleanField(default=False)
+    source_url = models.URLField(blank=True, null=True)  # For external API sources
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(null=True, blank=True)  # Auto-expire alerts
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.get_alert_type_display()}: {self.title}"
+    
+    def is_expired(self):
+        if self.expires_at:
+            return timezone.now() > self.expires_at
+        return False
+    
+    def get_severity_color(self):
+        severity_colors = {
+            'low': 'info',
+            'medium': 'warning',
+            'high': 'error',
+            'critical': 'error',
+        }
+        return severity_colors.get(self.severity, 'default')
+
 class Donation(models.Model):
     STATUS_CHOICES = (
         ('available', 'Available'),

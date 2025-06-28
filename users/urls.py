@@ -11,6 +11,14 @@ from .views import (
     DonorWarningsView,
     AdminSendWarningView,
     WarningDismissView,
+    CrisisAlertViewSet,
+    CrisisAlertAdminView,
+    CrisisAlertUserView,
+    CrisisAlertAdminActionView,
+    CrisisAlertUserActionView,
+    CrisisAlertAdminSendView,
+    CrisisAlertUserSendView,
+    CrisisAlertRefreshSystemView,
     PublicDonationsView
 )
 from rest_framework.routers import DefaultRouter
@@ -18,6 +26,7 @@ from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register(r'donations', DonationViewSet, basename='donation')
 router.register(r'feedbacks', DonationFeedbackViewSet, basename='feedback')
+router.register(r'crisis-alerts', CrisisAlertViewSet, basename='crisis-alert')
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -34,4 +43,13 @@ urlpatterns = [
     path('donor/warnings/', DonorWarningsView.as_view(), name='donor-warnings'),
     path('donor/warnings/<int:warning_id>/dismiss/', WarningDismissView.as_view(), name='warning-dismiss'),
     path('admin/donors/<int:donor_id>/warn/', AdminSendWarningView.as_view(), name='admin-send-warning'),
+    
+    # Crisis Alert endpoints
+    path('admin/crisis-alerts/', CrisisAlertAdminView.as_view(), name='admin_crisis_alerts'),
+    path('admin/crisis-alerts/<int:alert_id>/<str:action>/', CrisisAlertAdminActionView.as_view(), name='admin_crisis_alert_action'),
+    path('admin/crisis-alerts/send/', CrisisAlertAdminSendView.as_view(), name='admin_send_crisis_alert'),
+    path('user/crisis-alerts/', CrisisAlertUserView.as_view(), name='user_crisis_alerts'),
+    path('user/crisis-alerts/<int:alert_id>/<str:action>/', CrisisAlertUserActionView.as_view(), name='user_crisis_alert_action'),
+    path('user/crisis-alerts/send/', CrisisAlertUserSendView.as_view(), name='user_send_crisis_alert'),
+    path('admin/crisis-alerts/refresh-system/', CrisisAlertRefreshSystemView.as_view(), name='admin_refresh_crisis_system'),
 ] + router.urls 

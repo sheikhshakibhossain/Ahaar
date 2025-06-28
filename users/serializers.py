@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
-from users.models import Donation, DonationFeedback, DonationClaim, Warning
+from users.models import Donation, DonationFeedback, DonationClaim, Warning, CrisisAlert
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth.models import update_last_login
@@ -160,5 +160,20 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class WarningSerializer(serializers.ModelSerializer):
     class Meta:
         model = Warning
-        fields = ['id', 'user', 'message', 'created_at', 'is_read']
-        read_only_fields = ['id', 'created_at'] 
+        fields = ['id', 'message', 'created_at', 'is_read']
+
+class CrisisAlertSerializer(serializers.ModelSerializer):
+    severity_display = serializers.CharField(source='get_severity_display', read_only=True)
+    alert_type_display = serializers.CharField(source='get_alert_type_display', read_only=True)
+    severity_color = serializers.CharField(source='get_severity_color', read_only=True)
+    is_expired = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = CrisisAlert
+        fields = [
+            'id', 'title', 'message', 'alert_type', 'alert_type_display',
+            'severity', 'severity_display', 'severity_color', 'location',
+            'affected_areas', 'is_active', 'is_system_generated', 'source_url',
+            'created_at', 'updated_at', 'expires_at', 'is_expired'
+        ]
+        read_only_fields = ['is_system_generated', 'created_at', 'updated_at'] 

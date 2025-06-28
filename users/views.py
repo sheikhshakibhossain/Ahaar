@@ -12,13 +12,16 @@ from .serializers import (
 )
 from rest_framework.decorators import action
 from rest_framework.viewsets import ModelViewSet
-from .models import Donation, DonationFeedback, DonationClaim, Warning
-from .serializers import DonationSerializer, DonationFeedbackSerializer, DonationClaimSerializer, WarningSerializer
+from .models import Donation, DonationFeedback, DonationClaim, Warning, CrisisAlert, UserAlertDismiss
+from .serializers import DonationSerializer, DonationFeedbackSerializer, DonationClaimSerializer, WarningSerializer, CrisisAlertSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db import transaction
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
 from django.db import models
+import requests
+import json
+from datetime import datetime, timedelta
 
 User = get_user_model()
 
@@ -461,3 +464,267 @@ class PublicDonationsView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+class CrisisAlertViewSet(ModelViewSet):
+    serializer_class = CrisisAlertSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return CrisisAlert.objects.filter(
+            user=self.request.user
+        )
+        
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class CrisisAlertAdminView(generics.ListAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = CrisisAlertSerializer
+    pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        try:
+            search = self.request.query_params.get('search', '')
+
+            # First get all alerts
+            queryset = CrisisAlert.objects.all()
+
+            # Apply search filter if provided
+            if search:
+                queryset = queryset.filter(
+                    Q(title__icontains=search) |
+                    Q(description__icontains=search)
+                )
+
+            # Sort by created_at
+            queryset = queryset.order_by('-created_at')
+
+            # Debug logging
+            print("QuerySet:", queryset.query)
+            print("First alert in queryset:", queryset.first().__dict__ if queryset.first() else None)
+            return queryset
+        except Exception as e:
+            print(f"Error in get_queryset: {str(e)}")
+            return CrisisAlert.objects.none()
+
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                # Debug logging
+                print("Serialized data:", serializer.data)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"Error in list: {str(e)}")
+            return Response(
+                {'error': 'An error occurred while fetching alerts'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class CrisisAlertUserView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CrisisAlertSerializer
+
+    def get_queryset(self):
+        # Return all active crisis alerts that the user hasn't dismissed
+        return CrisisAlert.objects.filter(
+            is_active=True
+        ).exclude(
+            dismissed_by_users__user=self.request.user
+        ).order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'alerts': serializer.data
+        })
+
+class CrisisAlertAdminActionView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, alert_id, action):
+        try:
+            alert = CrisisAlert.objects.get(id=alert_id)
+            
+            if action == 'dismiss':
+                alert.is_dismissed = True
+                alert.save()
+                return Response({'status': 'dismissed'})
+            elif action == 'mark_read':
+                alert.is_read = True
+                alert.save()
+                return Response({'status': 'marked_read'})
+            else:
+                return Response(
+                    {'error': 'Invalid action'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except CrisisAlert.DoesNotExist:
+            return Response(
+                {'error': 'Alert not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class CrisisAlertUserActionView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, alert_id, action):
+        try:
+            # Get the alert (crisis alerts are global, not user-specific)
+            alert = CrisisAlert.objects.get(id=alert_id, is_active=True)
+            
+            if action == 'dismiss':
+                # Create a dismiss record for this user
+                UserAlertDismiss.objects.get_or_create(
+                    user=request.user,
+                    alert=alert
+                )
+                return Response({'status': 'dismissed'})
+            elif action == 'mark_read':
+                # For now, we'll just return success since we don't have user-specific read tracking
+                return Response({'status': 'marked_read'})
+            else:
+                return Response(
+                    {'error': 'Invalid action'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except CrisisAlert.DoesNotExist:
+            return Response(
+                {'error': 'Alert not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            print(f'Error in CrisisAlertUserActionView: {str(e)}')
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class CrisisAlertAdminSendView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    serializer_class = CrisisAlertSerializer
+
+    def create(self, request, *args, **kwargs):
+        title = request.data.get('title')
+        message = request.data.get('message')  # Frontend sends 'message'
+        description = request.data.get('description')  # Also check for 'description'
+        alert_type = request.data.get('alert_type', 'admin_alert')
+        severity = request.data.get('severity', 'medium')
+        affected_areas = request.data.get('affected_areas', [])
+        source_url = request.data.get('source_url', '')
+        
+        try:
+            if not title or not (message or description):
+                return Response(
+                    {'error': 'Title and message are required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Use message if provided, otherwise use description
+            alert_message = message or description
+
+            # Debug logging
+            print('Creating alert with title:', title)
+            print('Alert message:', alert_message)
+            print('Alert type:', alert_type)
+            print('Severity:', severity)
+
+            # Create the alert
+            alert = CrisisAlert.objects.create(
+                title=title,
+                message=alert_message,
+                alert_type=alert_type,
+                severity=severity,
+                affected_areas=affected_areas if isinstance(affected_areas, list) else [],
+                source_url=source_url,
+                is_active=True,
+                is_system_generated=False
+            )
+
+            # Debug logging
+            print('Created alert:', alert.__dict__)
+
+            serializer = self.get_serializer(alert)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f'Error creating alert: {str(e)}')
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class CrisisAlertRefreshSystemView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+
+    def post(self, request):
+        try:
+            from .services import DisasterDataService
+            
+            # Create system alerts from external data
+            created_alerts = DisasterDataService.create_system_alerts()
+            
+            return Response({
+                'message': f'Successfully refreshed system alerts. Created {len(created_alerts)} new alerts.',
+                'created_count': len(created_alerts)
+            })
+        except Exception as e:
+            print(f'Error refreshing system alerts: {str(e)}')
+            return Response(
+                {'error': f'Failed to refresh system alerts: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class CrisisAlertUserSendView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CrisisAlertSerializer
+
+    def create(self, request, *args, **kwargs):
+        title = request.data.get('title')
+        message = request.data.get('message')
+        description = request.data.get('description')
+        alert_type = request.data.get('alert_type', 'admin_alert')
+        severity = request.data.get('severity', 'medium')
+        affected_areas = request.data.get('affected_areas', [])
+        source_url = request.data.get('source_url', '')
+        
+        try:
+            if not title or not (message or description):
+                return Response(
+                    {'error': 'Title and message are required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Use message if provided, otherwise use description
+            alert_message = message or description
+
+            # Create the alert
+            alert = CrisisAlert.objects.create(
+                title=title,
+                message=alert_message,
+                alert_type=alert_type,
+                severity=severity,
+                affected_areas=affected_areas if isinstance(affected_areas, list) else [],
+                source_url=source_url,
+                is_active=True,
+                is_system_generated=False
+            )
+
+            serializer = self.get_serializer(alert)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
