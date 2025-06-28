@@ -8,6 +8,8 @@ import DonorDashboard from './pages/donor/DonorDashboard';
 import { CreateDonation } from './pages/donor/CreateDonation';
 import { DonationHistory } from './pages/donor/DonationHistory';
 import { CreateDonationPage } from './pages/donor/CreateDonationPage';
+import DonorWarningsPage from './pages/donor/DonorWarningsPage';
+import DonorAlertsPage from './pages/donor/DonorAlertsPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
 import EventPage from './pages/EventPage';
@@ -15,6 +17,8 @@ import { theme } from './theme';
 import { RecipientDashboard } from './pages/recipient/RecipientDashboard';
 import { NearbyDonationsPage } from './pages/recipient/NearbyDonationsPage';
 import { RecipientHistory } from './pages/recipient/RecipientHistory';
+import RecipientWarningsPage from './pages/recipient/RecipientWarningsPage';
+import RecipientAlertsPage from './pages/recipient/RecipientAlertsPage';
 import AdminPanel from './pages/admin/AdminPanel';
 
 // Update RootRedirect to handle authenticated users
@@ -81,6 +85,22 @@ function App() {
                             </ProtectedRoute>
                         } 
                     />
+                    <Route 
+                        path="/dashboard/warnings" 
+                        element={
+                            <ProtectedRoute requiredRole="donor">
+                                <DonorWarningsPage />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/dashboard/alerts" 
+                        element={
+                            <ProtectedRoute requiredRole="donor">
+                                <DonorAlertsPage />
+                            </ProtectedRoute>
+                        } 
+                    />
 
                     {/* Protected Recipient Routes */}
                     <Route 
@@ -104,6 +124,22 @@ function App() {
                         element={
                             <ProtectedRoute requiredRole="recipient">
                                 <RecipientHistory />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/recipient-dashboard/warnings" 
+                        element={
+                            <ProtectedRoute requiredRole="recipient">
+                                <RecipientWarningsPage />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/recipient-dashboard/alerts" 
+                        element={
+                            <ProtectedRoute requiredRole="recipient">
+                                <RecipientAlertsPage />
                             </ProtectedRoute>
                         } 
                     />

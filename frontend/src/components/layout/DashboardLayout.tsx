@@ -17,6 +17,7 @@ import {
     Avatar,
     Menu,
     MenuItem,
+    Badge,
 } from '@mui/material';
 import {
     Menu as MenuIcon,
@@ -27,10 +28,10 @@ import {
     LocationOn as LocationIcon,
     Person as PersonIcon,
     Notifications as NotificationsIcon,
+    Warning as WarningIcon,
+    NotificationsActive as AlertIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import { AdminWarningAlert } from '../donor/AdminWarningAlert';
-import { CrisisAlertBanner } from '../crisis/CrisisAlertBanner';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -44,21 +45,76 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
     const navigate = useNavigate();
     const { logout, user } = useAuth();
     const [mobileOpen, setMobileOpen] = React.useState(false);
+    const [warningCount, setWarningCount] = React.useState(0);
+    const [alertCount, setAlertCount] = React.useState(0);
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
     };
 
+    // Fetch warning and alert counts
+    React.useEffect(() => {
+        const fetchCounts = async () => {
+            try {
+                // Fetch warning count
+                const warningsResponse = await fetch('/api/donor/warnings/', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                if (warningsResponse.ok) {
+                    const warningsData = await warningsResponse.json();
+                    setWarningCount(warningsData.warnings?.length || 0);
+                }
+
+                // Fetch alert count
+                const alertsResponse = await fetch('/api/user/crisis-alerts/', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                if (alertsResponse.ok) {
+                    const alertsData = await alertsResponse.json();
+                    setAlertCount(alertsData.alerts?.length || 0);
+                }
+            } catch (error) {
+                console.error('Error fetching counts:', error);
+            }
+        };
+
+        fetchCounts();
+    }, []);
+
     const donorMenuItems = [
         { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
         { text: 'New Donation', icon: <AddIcon />, path: '/dashboard/donate' },
         { text: 'Donation History', icon: <HistoryIcon />, path: '/dashboard/history' },
+        { 
+            text: 'Warnings', 
+            icon: <Badge badgeContent={warningCount} color="error"><WarningIcon /></Badge>, 
+            path: '/dashboard/warnings' 
+        },
+        { 
+            text: 'Alerts', 
+            icon: <Badge badgeContent={alertCount} color="warning"><AlertIcon /></Badge>, 
+            path: '/dashboard/alerts' 
+        },
     ];
 
     const recipientMenuItems = [
         { text: 'Dashboard', icon: <DashboardIcon />, path: '/recipient-dashboard' },
         { text: 'Available Donations', icon: <LocationIcon />, path: '/recipient-dashboard/nearby' },
         { text: 'My Donations', icon: <HistoryIcon />, path: '/recipient-dashboard/history' },
+        { 
+            text: 'Warnings', 
+            icon: <Badge badgeContent={warningCount} color="error"><WarningIcon /></Badge>, 
+            path: '/recipient-dashboard/warnings' 
+        },
+        { 
+            text: 'Alerts', 
+            icon: <Badge badgeContent={alertCount} color="warning"><AlertIcon /></Badge>, 
+            path: '/recipient-dashboard/alerts' 
+        },
     ];
 
     const menuItems = user?.role === 'donor' ? donorMenuItems : recipientMenuItems;
@@ -152,11 +208,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
                     flexGrow: 1,
                     p: 3,
                     width: { sm: `calc(100% - ${drawerWidth}px)` },
-                    mt: '64px',
+                    ml: { sm: `${drawerWidth}px` },
                 }}
             >
-                <CrisisAlertBanner />
-                <AdminWarningAlert />
                 {children}
             </Box>
         </Box>

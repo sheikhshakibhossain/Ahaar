@@ -15,7 +15,6 @@ import {
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { api } from '../../services/api';
 import { Donation } from '../../types/donation';
-import { AdminWarningAlert } from '../../components/donor/AdminWarningAlert';
 import { User } from '../../types/auth';
 
 const DonorDashboard: React.FC = () => {
@@ -81,7 +80,6 @@ const DonorDashboard: React.FC = () => {
     return (
         <DashboardLayout title="Donor Dashboard">
             <Container maxWidth="lg">
-                <AdminWarningAlert />
                 <Box mb={4}>
                     <Typography variant="h4" gutterBottom>
                         Welcome to Your Dashboard
