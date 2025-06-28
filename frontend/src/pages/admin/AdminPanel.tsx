@@ -17,6 +17,8 @@ import {
     InputAdornment,
     CircularProgress,
     Alert,
+    Tabs,
+    Tab,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -24,12 +26,14 @@ import {
     Block as BlockIcon,
     Logout as LogoutIcon,
     LockOpen as UnbanIcon,
+    Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { adminService, BadDonor } from '../../services/admin';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { WarningDialog } from '../../components/admin/WarningDialog';
+import { CrisisAlertManager } from '../../components/admin/CrisisAlertManager';
 
 const AdminPanel: React.FC = () => {
     const { logout } = useAuth();
@@ -45,6 +49,7 @@ const AdminPanel: React.FC = () => {
     const [sortBy, setSortBy] = useState<'rating' | 'feedback'>('rating');
     const [selectedDonor, setSelectedDonor] = useState<BadDonor | null>(null);
     const [showWarningDialog, setShowWarningDialog] = useState(false);
+    const [activeTab, setActiveTab] = useState(0);
 
     const handleLogout = async () => {
         try {
@@ -159,141 +164,164 @@ const AdminPanel: React.FC = () => {
                 </Button>
             </Box>
 
-            {/* Bad Donors Section */}
-            <Paper sx={{ p: 3, mb: 4 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                    <Typography variant="h5">Bad Donors</Typography>
-                    <Box display="flex" gap={2}>
-                        <TextField
-                            size="small"
-                            placeholder="Search donors..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon />
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                        <TextField
-                            select
-                            size="small"
-                            value={minFeedback}
-                            onChange={(e) => setMinFeedback(Number(e.target.value))}
-                            SelectProps={{
-                                native: true,
-                            }}
-                        >
-                            <option value={3}>3+ Feedback</option>
-                            <option value={5}>5+ Feedback</option>
-                            <option value={10}>10+ Feedback</option>
-                        </TextField>
-                    </Box>
-                </Box>
-
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-                <TableContainer>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Email</TableCell>
-                                <TableCell>Donations</TableCell>
-                                <TableCell>Average Rating</TableCell>
-                                <TableCell>Feedback Count</TableCell>
-                                <TableCell>Status</TableCell>
-                                <TableCell>Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {(donors || []).map((donor) => (
-                                <TableRow 
-                                    key={donor.id}
-                                    sx={{
-                                        backgroundColor: donor.is_banned ? 'rgba(255, 0, 0, 0.05)' : 'inherit',
-                                        '&:hover': {
-                                            backgroundColor: donor.is_banned ? 'rgba(255, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.04)',
-                                        },
-                                    }}
-                                >
-                                    <TableCell>
-                                        <Box display="flex" alignItems="center" gap={1}>
-                                            {donor.first_name} {donor.last_name}
-                                            {donor.is_banned && (
-                                                <Chip
-                                                    label="BANNED"
-                                                    color="error"
-                                                    size="small"
-                                                    sx={{ fontWeight: 'bold' }}
-                                                />
-                                            )}
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>{donor.email}</TableCell>
-                                    <TableCell>{donor.donation_count}</TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={donor.average_rating.toFixed(1)}
-                                            color={donor.average_rating < 2.5 ? 'error' : 'warning'}
-                                        />
-                                    </TableCell>
-                                    <TableCell>{donor.feedback_count}</TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={donor.is_banned ? 'Banned' : 'Active'}
-                                            color={donor.is_banned ? 'error' : 'success'}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box display="flex" gap={1}>
-                                            {donor.is_banned ? (
-                                                <Button
-                                                    size="small"
-                                                    startIcon={<UnbanIcon />}
-                                                    onClick={() => handleUnbanDonor(donor.id)}
-                                                    color="success"
-                                                >
-                                                    Unban
-                                                </Button>
-                                            ) : (
-                                                <>
-                                                    <Button
-                                                        size="small"
-                                                        startIcon={<WarningIcon />}
-                                                        onClick={() => handleWarnDonor(donor.id)}
-                                                    >
-                                                        Warn
-                                                    </Button>
-                                                    <Button
-                                                        size="small"
-                                                        startIcon={<BlockIcon />}
-                                                        onClick={() => handleBanDonor(donor.id)}
-                                                        color="error"
-                                                    >
-                                                        Ban
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-
-                <TablePagination
-                    component="div"
-                    count={totalDonors}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                />
+            {/* Tab Navigation */}
+            <Paper sx={{ mb: 3 }}>
+                <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+                    <Tab 
+                        icon={<WarningIcon />} 
+                        label="Bad Donors" 
+                        iconPosition="start"
+                    />
+                    <Tab 
+                        icon={<NotificationsIcon />} 
+                        label="Crisis Alerts" 
+                        iconPosition="start"
+                    />
+                </Tabs>
             </Paper>
+
+            {/* Bad Donors Section */}
+            {activeTab === 0 && (
+                <Paper sx={{ p: 3, mb: 4 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                        <Typography variant="h5">Bad Donors</Typography>
+                        <Box display="flex" gap={2}>
+                            <TextField
+                                size="small"
+                                placeholder="Search donors..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchIcon />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                            <TextField
+                                select
+                                size="small"
+                                value={minFeedback}
+                                onChange={(e) => setMinFeedback(Number(e.target.value))}
+                                SelectProps={{
+                                    native: true,
+                                }}
+                            >
+                                <option value={3}>3+ Feedback</option>
+                                <option value={5}>5+ Feedback</option>
+                                <option value={10}>10+ Feedback</option>
+                            </TextField>
+                        </Box>
+                    </Box>
+
+                    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+                    <TableContainer>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Name</TableCell>
+                                    <TableCell>Email</TableCell>
+                                    <TableCell>Donations</TableCell>
+                                    <TableCell>Average Rating</TableCell>
+                                    <TableCell>Feedback Count</TableCell>
+                                    <TableCell>Status</TableCell>
+                                    <TableCell>Actions</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {(donors || []).map((donor) => (
+                                    <TableRow 
+                                        key={donor.id}
+                                        sx={{
+                                            backgroundColor: donor.is_banned ? 'rgba(255, 0, 0, 0.05)' : 'inherit',
+                                            '&:hover': {
+                                                backgroundColor: donor.is_banned ? 'rgba(255, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.04)',
+                                            },
+                                        }}
+                                    >
+                                        <TableCell>
+                                            <Box display="flex" alignItems="center" gap={1}>
+                                                {donor.first_name} {donor.last_name}
+                                                {donor.is_banned && (
+                                                    <Chip
+                                                        label="BANNED"
+                                                        color="error"
+                                                        size="small"
+                                                        sx={{ fontWeight: 'bold' }}
+                                                    />
+                                                )}
+                                            </Box>
+                                        </TableCell>
+                                        <TableCell>{donor.email}</TableCell>
+                                        <TableCell>{donor.donation_count}</TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={donor.average_rating.toFixed(1)}
+                                                color={donor.average_rating < 2.5 ? 'error' : 'warning'}
+                                            />
+                                        </TableCell>
+                                        <TableCell>{donor.feedback_count}</TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={donor.is_banned ? 'Banned' : 'Active'}
+                                                color={donor.is_banned ? 'error' : 'success'}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Box display="flex" gap={1}>
+                                                {donor.is_banned ? (
+                                                    <Button
+                                                        size="small"
+                                                        startIcon={<UnbanIcon />}
+                                                        onClick={() => handleUnbanDonor(donor.id)}
+                                                        color="success"
+                                                    >
+                                                        Unban
+                                                    </Button>
+                                                ) : (
+                                                    <>
+                                                        <Button
+                                                            size="small"
+                                                            startIcon={<WarningIcon />}
+                                                            onClick={() => handleWarnDonor(donor.id)}
+                                                        >
+                                                            Warn
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            startIcon={<BlockIcon />}
+                                                            onClick={() => handleBanDonor(donor.id)}
+                                                            color="error"
+                                                        >
+                                                            Ban
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+
+                    <TablePagination
+                        component="div"
+                        count={totalDonors}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        rowsPerPage={rowsPerPage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
+                </Paper>
+            )}
+
+            {/* Crisis Alerts Section */}
+            {activeTab === 1 && (
+                <CrisisAlertManager />
+            )}
 
             <WarningDialog
                 open={showWarningDialog}
