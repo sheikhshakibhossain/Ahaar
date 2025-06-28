@@ -17,6 +17,8 @@ from .serializers import DonationSerializer, DonationFeedbackSerializer, Donatio
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db import transaction
 from django.db.models import Avg, Count, Q
+from django.utils import timezone
+from django.db import models
 
 User = get_user_model()
 
@@ -441,3 +443,21 @@ class WarningDismissView(generics.GenericAPIView):
                 {'error': 'Warning not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+class PublicDonationsView(generics.ListAPIView):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = DonationSerializer
+
+    def get_queryset(self):
+        # Return only available donations that haven't expired
+        return Donation.objects.filter(
+            status='available',
+            expiry_date__gt=timezone.now()
+        ).exclude(
+            quantity_taken__gte=models.F('quantity')
+        ).order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
