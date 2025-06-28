@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  useTheme,
 } from '@mui/material';
 import {
   MyLocation,
@@ -32,6 +33,11 @@ import {
   FilterList,
   Sort,
   LocationOn,
+  Inventory as InventoryIcon,
+  Favorite as FavoriteIcon,
+  TrendingUp as TrendingUpIcon,
+  AccessTime as AccessTimeIcon,
+  Category as CategoryIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
@@ -44,158 +50,261 @@ interface NearbyDonation extends Donation {
 }
 
 export const NearbyDonationsPage: React.FC = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [donations, setDonations] = useState<NearbyDonation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [selectedDonation, setSelectedDonation] = useState<NearbyDonation | null>(null);
+  const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [maxDistance, setMaxDistance] = useState(10); // in kilometers
   const [sortBy, setSortBy] = useState<'distance' | 'expiry'>('distance');
-  const [claimQuantity, setClaimQuantity] = useState<number>(1);
-  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+  const [distanceFilter, setDistanceFilter] = useState<number>(50);
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
 
-  // Get user's location
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setError('Unable to get your location. Please enable location services.');
-        }
-      );
-    } else {
-      setError('Geolocation is not supported by your browser.');
-    }
+    fetchDonations();
   }, []);
 
-  // Fetch available donations
-  useEffect(() => {
-    const fetchDonations = async () => {
-      try {
-        setLoading(true);
-        const data = await donationService.getAvailableDonations();
-        // Filter available donations and calculate distances
-        const availableDonations = data
-          .filter((d: Donation) => d.status === 'available')
-          .map((d: Donation) => {
-            // Calculate distance if user location is available
-            let distance = -1; // -1 indicates unknown distance
-            console.log('Processing donation:', d.title);
-            console.log('User location:', userLocation);
-            console.log('Donation location:', d.location);
-            
-            if (userLocation && d.location) {
-              try {
-                // Parse location data if it's a string
-                const donationLocation = typeof d.location === 'string' 
-                  ? JSON.parse(d.location) 
-                  : d.location;
-                
-                console.log('Parsed donation location:', donationLocation);
-
-                // Calculate distance using the Haversine formula
-                const R = 6371; // Earth's radius in km
-                const lat1 = userLocation.lat * Math.PI / 180;
-                const lat2 = donationLocation.lat * Math.PI / 180;
-                const deltaLat = (donationLocation.lat - userLocation.lat) * Math.PI / 180;
-                const deltaLng = (donationLocation.lng - userLocation.lng) * Math.PI / 180;
-
-                const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
-                        Math.cos(lat1) * Math.cos(lat2) *
-                        Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-                distance = R * c;
-                
-                console.log('Calculated distance:', distance);
-              } catch (err) {
-                console.error('Error processing location:', err);
-                distance = -1;
-              }
-            } else {
-              console.log('Missing location data - userLocation or donation.location not available');
-            }
-
-            return {
-              ...d,
-              distance
-            } as NearbyDonation;
-          })
-          .filter(d => {
-            // Only filter by distance if we have a valid distance and maxDistance is set
-            if (d.distance === -1) return true;
-            return d.distance <= maxDistance;
-          })
-          .sort((a, b) => {
-            if (sortBy === 'distance') {
-              // Put unknown distances at the end
-              if (a.distance === -1) return 1;
-              if (b.distance === -1) return -1;
-              return a.distance - b.distance;
-            } else {
-              return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
-            }
-          });
-
-        setDonations(availableDonations);
-      } catch (err) {
-        setError('Failed to fetch donations. Please try again later.');
-        console.error('Error fetching donations:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDonations();
-  }, [userLocation, maxDistance, sortBy]);
-
-  const handleClaimClick = (donation: NearbyDonation) => {
-    setSelectedDonation(donation);
-    setClaimQuantity(1);
-    setClaimDialogOpen(true);
-  };
-
-  const handleClaimConfirm = async () => {
-    if (!selectedDonation) return;
-
+  const fetchDonations = async () => {
     try {
       setLoading(true);
-      await donationService.claimDonation(selectedDonation.id, claimQuantity);
-      setClaimDialogOpen(false);
-      // Refresh the donations list
-      const updatedDonations = donations.filter(d => d.id !== selectedDonation.id);
-      setDonations(updatedDonations);
-      // Redirect to recipient history page
-      navigate('/recipient-dashboard/history');
-    } catch (err: any) {
-      // Handle specific error messages from the backend
-      const errorMessage = err.response?.data?.error || 'Failed to claim donation. Please try again.';
-      setError(errorMessage);
-      console.error('Error claiming donation:', err);
+      const response = await donationService.getAvailableDonations();
+      
+      // Simulate distance calculation (in a real app, this would use actual location)
+      const donationsWithDistance = response.map(donation => ({
+        ...donation,
+        distance: Math.random() * 50 // Random distance for demo
+      }));
+      
+      setDonations(donationsWithDistance);
+    } catch (err) {
+      setError('Failed to fetch donations');
+      console.error('Error fetching donations:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  const filteredDonations = donations
+    .filter(donation => {
+      const matchesSearch = donation.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           donation.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDistance = donation.distance <= distanceFilter;
+      const matchesCategory = !categoryFilter || donation.category === categoryFilter;
+      return matchesSearch && matchesDistance && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'distance') {
+        return a.distance - b.distance;
+      } else {
+        return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
+      }
+    });
+
+  const stats = {
+    total: donations.length,
+    nearby: donations.filter(d => d.distance <= 10).length,
+    expiringSoon: donations.filter(d => {
+      const expiryDate = new Date(d.expiry_date);
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return expiryDate <= tomorrow;
+    }).length,
+    categories: new Set(donations.map(d => d.category)).size,
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Available Donations">
+        <Container maxWidth="xl">
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+            <CircularProgress />
+          </Box>
+        </Container>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout title="Available Donations">
-      <Container maxWidth="lg">
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* Filters and Search */}
-          <Box>
-            <Paper sx={{ p: 2, mb: 2 }}>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                <Box sx={{ flex: '1 1 30%', minWidth: '250px' }}>
+      <Container maxWidth="xl">
+        {/* Hero Section */}
+        <Box 
+          sx={{ 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 3,
+            p: 4,
+            mb: 4,
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+              opacity: 0.3,
+            }
+          }}
+        >
+          <Box position="relative" zIndex={1}>
+            <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
+              Available Donations 🎁
+            </Typography>
+            <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
+              Discover generous donations from your community
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Statistics Cards */}
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card 
+              sx={{ 
+                p: 3, 
+                textAlign: 'center',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: -50,
+                  right: -50,
+                  width: 100,
+                  height: 100,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.1)',
+                }
+              }}
+            >
+              <CardContent>
+                <InventoryIcon sx={{ fontSize: 40, mb: 2, opacity: 0.8 }} />
+                <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  {stats.total}
+                </Typography>
+                <Typography variant="h6">Total Available</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card 
+              sx={{ 
+                p: 3, 
+                textAlign: 'center',
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: -50,
+                  right: -50,
+                  width: 100,
+                  height: 100,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.1)',
+                }
+              }}
+            >
+              <CardContent>
+                <LocationOn sx={{ fontSize: 40, mb: 2, opacity: 0.8 }} />
+                <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  {stats.nearby}
+                </Typography>
+                <Typography variant="h6">Nearby (≤10km)</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card 
+              sx={{ 
+                p: 3, 
+                textAlign: 'center',
+                background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: -50,
+                  right: -50,
+                  width: 100,
+                  height: 100,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.1)',
+                }
+              }}
+            >
+              <CardContent>
+                <AccessTimeIcon sx={{ fontSize: 40, mb: 2, opacity: 0.8 }} />
+                <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  {stats.expiringSoon}
+                </Typography>
+                <Typography variant="h6">Expiring Soon</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card 
+              sx={{ 
+                p: 3, 
+                textAlign: 'center',
+                background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: -50,
+                  right: -50,
+                  width: 100,
+                  height: 100,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.1)',
+                }
+              }}
+            >
+              <CardContent>
+                <CategoryIcon sx={{ fontSize: 40, mb: 2, opacity: 0.8 }} />
+                <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  {stats.categories}
+                </Typography>
+                <Typography variant="h6">Categories</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Filters and Search */}
+        <Card sx={{ p: 3, mb: 4 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+              Find Donations
+            </Typography>
+            <Chip 
+              icon={<InventoryIcon />}
+              label={`${filteredDonations.length} results`}
+              color="primary"
+            />
+          </Box>
+
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Filters and Search */}
+            <Box>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
                     placeholder="Search donations..."
@@ -209,8 +318,8 @@ export const NearbyDonationsPage: React.FC = () => {
                       ),
                     }}
                   />
-                </Box>
-                <Box sx={{ flex: '1 1 30%', minWidth: '250px' }}>
+                </Grid>
+                <Grid item xs={12} md={4}>
                   <FormControl fullWidth>
                     <InputLabel>Sort By</InputLabel>
                     <Select
@@ -222,129 +331,140 @@ export const NearbyDonationsPage: React.FC = () => {
                       <MenuItem value="expiry">Expiry Date</MenuItem>
                     </Select>
                   </FormControl>
-                </Box>
-                <Box sx={{ flex: '1 1 30%', minWidth: '250px' }}>
-                  <Box sx={{ px: 2 }}>
-                    <Typography gutterBottom>Maximum Distance: {maxDistance}km</Typography>
-                    <Slider
-                      value={maxDistance}
-                      onChange={(_, value) => setMaxDistance(value as number)}
-                      min={1}
-                      max={50}
-                      step={1}
-                      valueLabelDisplay="auto"
-                    />
-                  </Box>
-                </Box>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth>
+                    <InputLabel>Category</InputLabel>
+                    <Select
+                      value={categoryFilter}
+                      label="Category"
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                    >
+                      <MenuItem value="">All Categories</MenuItem>
+                      {Array.from(new Set(donations.map(d => d.category))).map(category => (
+                        <MenuItem key={category} value={category}>{category}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+              
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Distance: {distanceFilter}km
+                </Typography>
+                <Slider
+                  value={distanceFilter}
+                  onChange={(_, value) => setDistanceFilter(value as number)}
+                  min={1}
+                  max={100}
+                  valueLabelDisplay="auto"
+                  sx={{ width: '100%' }}
+                />
               </Box>
-            </Paper>
-          </Box>
+            </Box>
 
-          {/* Donations List */}
-          <Box>
-            {loading ? (
-              <Box display="flex" justifyContent="center" p={4}>
-                <CircularProgress />
+            {/* Donations Grid */}
+            {filteredDonations.length === 0 ? (
+              <Box textAlign="center" py={4}>
+                <FavoriteIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No donations found
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Try adjusting your search criteria or check back later
+                </Typography>
               </Box>
-            ) : donations.length === 0 ? (
-              <Paper sx={{ p: 3, textAlign: 'center' }}>
-                <Typography>No donations found matching your criteria.</Typography>
-              </Paper>
             ) : (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                {donations.map((donation) => (
-                  <Box key={donation.id} sx={{ flex: '1 1 30%', minWidth: '300px' }}>
-                    <Card>
-                      <CardContent>
-                        <Typography variant="h6" gutterBottom>
-                          {donation.title}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary" gutterBottom>
-                          {donation.description}
-                        </Typography>
-                        <Box sx={{ mt: 2 }}>
-                          {donation.distance >= 0 ? (
-                            <Chip
-                              icon={<LocationOn />}
-                              label={`${donation.distance.toFixed(1)}km away`}
-                              size="small"
-                              sx={{ mr: 1 }}
-                            />
-                          ) : (
-                            <Chip
-                              icon={<LocationOn />}
-                              label="Distance unknown"
-                              size="small"
-                              sx={{ mr: 1 }}
-                            />
-                          )}
+              <Grid container spacing={3}>
+                {filteredDonations.map((donation) => (
+                  <Grid item xs={12} sm={6} md={4} key={donation.id}>
+                    <Card 
+                      sx={{ 
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        '&:hover': {
+                          boxShadow: theme.shadows[8],
+                          transform: 'translateY(-4px)',
+                          transition: 'all 0.3s ease'
+                        }
+                      }}
+                    >
+                      {donation.image && (
+                        <CardMedia
+                          component="img"
+                          height="140"
+                          image={donation.image}
+                          alt={donation.title}
+                        />
+                      )}
+                      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
+                            {donation.title}
+                          </Typography>
                           <Chip
-                            label={`Expires: ${format(new Date(donation.expiry_date), 'MMM d, h:mm a')}`}
+                            label={`${donation.distance.toFixed(1)}km`}
                             size="small"
-                            color="warning"
+                            color="primary"
+                            variant="outlined"
                           />
                         </Box>
-                        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                        
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, flex: 1 }}>
+                          {donation.description.substring(0, 100)}...
+                        </Typography>
+                        
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                          <Box display="flex" alignItems="center">
+                            <LocationOn sx={{ mr: 1, fontSize: 16, color: 'text.secondary' }} />
+                            <Typography variant="body2" color="text.secondary">
+                              Qty: {donation.quantity}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={donation.category}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </Box>
+                        
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="body2" color="text.secondary">
+                            Expires: {format(new Date(donation.expiry_date), 'MMM dd')}
+                          </Typography>
                           <Button
                             variant="contained"
-                            color="primary"
-                            fullWidth
-                            onClick={() => handleClaimClick(donation)}
-                          >
-                            Claim Now
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            fullWidth
+                            size="small"
                             onClick={() => {
                               setSelectedDonation(donation);
                               setShowDetailsDialog(true);
                             }}
                           >
-                            Details
+                            View Details
                           </Button>
                         </Box>
                       </CardContent>
                     </Card>
-                  </Box>
+                  </Grid>
                 ))}
-              </Box>
+              </Grid>
             )}
           </Box>
-        </Box>
+        </Card>
 
         <DonationDetailsDialog
           donation={selectedDonation}
           open={showDetailsDialog}
-          onClose={() => {
+          onClose={() => setShowDetailsDialog(false)}
+          onClaim={() => {
             setShowDetailsDialog(false);
-            setSelectedDonation(null);
+            // Refresh donations after claiming
+            fetchDonations();
           }}
+          isRecipient={true}
         />
-
-        <Dialog open={claimDialogOpen} onClose={() => setClaimDialogOpen(false)}>
-          <DialogTitle>Claim Donation</DialogTitle>
-          <DialogContent>
-            <Typography gutterBottom>
-              How many items would you like to claim?
-            </Typography>
-            <TextField
-              type="number"
-              label="Quantity"
-              value={claimQuantity}
-              onChange={(e) => setClaimQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-              inputProps={{ min: 1, max: selectedDonation?.quantity || 1 }}
-              fullWidth
-              sx={{ mt: 2 }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setClaimDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleClaimConfirm} variant="contained" color="primary">
-              Confirm Claim
-            </Button>
-          </DialogActions>
-        </Dialog>
       </Container>
     </DashboardLayout>
   );
