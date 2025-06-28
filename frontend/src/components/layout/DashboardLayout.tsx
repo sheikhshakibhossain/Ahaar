@@ -106,11 +106,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
         { text: 'Available Donations', icon: <LocationIcon />, path: '/recipient-dashboard/nearby' },
         { text: 'My Donations', icon: <HistoryIcon />, path: '/recipient-dashboard/history' },
         { 
-            text: 'Warnings', 
-            icon: <Badge badgeContent={warningCount} color="error"><WarningIcon /></Badge>, 
-            path: '/recipient-dashboard/warnings' 
-        },
-        { 
             text: 'Alerts', 
             icon: <Badge badgeContent={alertCount} color="warning"><AlertIcon /></Badge>, 
             path: '/recipient-dashboard/alerts' 
