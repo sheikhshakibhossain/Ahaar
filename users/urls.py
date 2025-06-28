@@ -13,6 +13,7 @@ from .views import (
     WarningDismissView,
     CrisisAlertViewSet,
     CrisisAlertAdminView,
+    CrisisAlertAdminDeleteView,
     CrisisAlertUserView,
     CrisisAlertAdminActionView,
     CrisisAlertUserActionView,
@@ -46,6 +47,7 @@ urlpatterns = [
     
     # Crisis Alert endpoints
     path('admin/crisis-alerts/', CrisisAlertAdminView.as_view(), name='admin_crisis_alerts'),
+    path('admin/crisis-alerts/<int:pk>/', CrisisAlertAdminDeleteView.as_view(), name='admin_crisis_alert_delete'),
     path('admin/crisis-alerts/<int:alert_id>/<str:action>/', CrisisAlertAdminActionView.as_view(), name='admin_crisis_alert_action'),
     path('admin/crisis-alerts/send/', CrisisAlertAdminSendView.as_view(), name='admin_send_crisis_alert'),
     path('user/crisis-alerts/', CrisisAlertUserView.as_view(), name='user_crisis_alerts'),

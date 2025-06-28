@@ -527,6 +527,53 @@ class CrisisAlertAdminView(generics.ListAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    def delete(self, request, *args, **kwargs):
+        """Handle DELETE requests for crisis alerts"""
+        try:
+            alert_id = kwargs.get('pk')
+            if not alert_id:
+                return Response(
+                    {'error': 'Alert ID is required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            alert = CrisisAlert.objects.get(id=alert_id)
+            alert.delete()
+            return Response({'message': 'Alert deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        except CrisisAlert.DoesNotExist:
+            return Response(
+                {'error': 'Alert not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            print(f"Error deleting alert: {str(e)}")
+            return Response(
+                {'error': 'Failed to delete alert'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class CrisisAlertAdminDeleteView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    queryset = CrisisAlert.objects.all()
+    serializer_class = CrisisAlertSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            alert = self.get_object()
+            alert.delete()
+            return Response({'message': 'Alert deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        except CrisisAlert.DoesNotExist:
+            return Response(
+                {'error': 'Alert not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            print(f"Error deleting alert: {str(e)}")
+            return Response(
+                {'error': 'Failed to delete alert'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class CrisisAlertUserView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CrisisAlertSerializer
