@@ -10,6 +10,7 @@ import { DonationHistory } from './pages/donor/DonationHistory';
 import { CreateDonationPage } from './pages/donor/CreateDonationPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
+import EventPage from './pages/EventPage';
 import { theme } from './theme';
 import { RecipientDashboard } from './pages/recipient/RecipientDashboard';
 import { NearbyDonationsPage } from './pages/recipient/NearbyDonationsPage';
@@ -53,6 +54,7 @@ function App() {
                     <Route path="/" element={<RootRedirect />} />
                     <Route path="/login" element={<LoginForm />} />
                     <Route path="/register" element={<RegisterForm />} />
+                    <Route path="/event" element={<EventPage />} />
                     
                     {/* Protected Donor Routes */}
                     <Route 

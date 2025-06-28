@@ -1,7 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FiArrowRight, FiHeart, FiUsers, FiMapPin, FiShield, FiClock, FiCheckCircle } from 'react-icons/fi';
+import { 
+    ArrowForward, 
+    Favorite, 
+    People, 
+    LocationOn, 
+    Security, 
+    AccessTime, 
+    CheckCircle 
+} from '@mui/icons-material';
 import { DonationList } from '../components/donation/DonationList';
 
 interface Donation {
@@ -102,7 +110,7 @@ const LandingPage: React.FC = () => {
                             >
                                 Get Started
                                 <span className="group-hover:translate-x-1 transition-transform">
-                                    <FiArrowRight />
+                                    <ArrowForward />
                                 </span>
                             </Link>
                             <Link
@@ -157,17 +165,17 @@ const LandingPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                         {[
                             {
-                                icon: <FiHeart className="w-6 h-6" />,
+                                icon: <Favorite />,
                                 title: "List Your Donation",
                                 description: "Share your surplus food with our community in just a few clicks"
                             },
                             {
-                                icon: <FiUsers className="w-6 h-6" />,
+                                icon: <People />,
                                 title: "Quick Matching",
                                 description: "We instantly connect your donation with nearby recipients"
                             },
                             {
-                                icon: <FiMapPin className="w-6 h-6" />,
+                                icon: <LocationOn />,
                                 title: "Make an Impact",
                                 description: "Complete the donation and track your contribution"
                             }
@@ -196,6 +204,91 @@ const LandingPage: React.FC = () => {
                 </div>
             </section>
 
+            {/* Current Donation Event Section */}
+            <section className="py-24 bg-gradient-to-br from-green-50 to-teal-50 relative overflow-hidden">
+                <div className="absolute inset-0 bg-pattern opacity-20"></div>
+                <div className="container mx-auto px-4 relative z-10">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.6 }}
+                            className="mb-8"
+                        >
+                            <span className="glass-effect px-6 py-2 rounded-full text-sm font-medium inline-block shadow-sm hover:shadow-md transition-all duration-300">
+                                🍽️ Live Now
+                            </span>
+                        </motion.div>
+
+                        <motion.h2
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.6, delay: 0.2 }}
+                            className="text-4xl md:text-5xl font-bold mb-6"
+                        >
+                            Current Donation Event Near You
+                        </motion.h2>
+
+                        <motion.p
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.6, delay: 0.4 }}
+                            className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl mx-auto"
+                        >
+                            Discover fresh food donations available in your area right now. 
+                            Browse through available items, filter by category, and find what you need.
+                        </motion.p>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.6, delay: 0.6 }}
+                            className="flex flex-col sm:flex-row gap-4 justify-center"
+                        >
+                            <Link
+                                to="/event"
+                                className="btn-primary group flex items-center justify-center gap-2"
+                            >
+                                Explore Donations
+                                <span className="group-hover:translate-x-1 transition-transform">
+                                    <ArrowForward />
+                                </span>
+                            </Link>
+                            <Link
+                                to="/register"
+                                className="btn-secondary flex items-center justify-center"
+                            >
+                                Join to Claim
+                            </Link>
+                        </motion.div>
+
+                        {/* Quick Stats */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.6, delay: 0.8 }}
+                            className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8"
+                        >
+                            {[
+                                { number: "50+", label: "Active Donations" },
+                                { number: "24h", label: "Fresh Updates" },
+                                { number: "100%", label: "Free to Browse" }
+                            ].map((stat, index) => (
+                                <div key={index} className="glass-effect rounded-xl p-4 text-center">
+                                    <div className="text-2xl font-bold gradient-text">{stat.number}</div>
+                                    <div className="text-sm text-gray-600">{stat.label}</div>
+                                </div>
+                            ))}
+                        </motion.div>
+                    </div>
+                </div>
+            </section>
+
             {/* Benefits Section */}
             <section className="py-24 bg-gray-50 relative overflow-hidden">
                 <div className="container mx-auto px-4">
@@ -217,17 +310,17 @@ const LandingPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {[
                             {
-                                icon: <FiShield className="w-6 h-6" />,
+                                icon: <Security />,
                                 title: "Verified Users",
                                 description: "All donors and recipients are verified for safety and reliability"
                             },
                             {
-                                icon: <FiClock className="w-6 h-6" />,
+                                icon: <AccessTime />,
                                 title: "Real-time Updates",
                                 description: "Get instant notifications about donation matches and status"
                             },
                             {
-                                icon: <FiCheckCircle className="w-6 h-6" />,
+                                icon: <CheckCircle />,
                                 title: "Quality Assured",
                                 description: "We ensure all donations meet food safety standards"
                             }
