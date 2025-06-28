@@ -14,6 +14,9 @@ import {
     Toolbar,
     Typography,
     useTheme,
+    Avatar,
+    Menu,
+    MenuItem,
 } from '@mui/material';
 import {
     Menu as MenuIcon,
@@ -22,8 +25,12 @@ import {
     History as HistoryIcon,
     Logout as LogoutIcon,
     LocationOn as LocationIcon,
+    Person as PersonIcon,
+    Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { AdminWarningAlert } from '../donor/AdminWarningAlert';
+import { CrisisAlertBanner } from '../crisis/CrisisAlertBanner';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -148,6 +155,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
                     mt: '64px',
                 }}
             >
+                <CrisisAlertBanner />
+                <AdminWarningAlert />
                 {children}
             </Box>
         </Box>
