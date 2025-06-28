@@ -206,9 +206,17 @@ const EventPage: React.FC = () => {
                                     variant="contained" 
                                     size="large"
                                     sx={{ 
-                                        bgcolor: 'white', 
-                                        color: 'green.700',
-                                        '&:hover': { bgcolor: 'green.50' }
+                                        bgcolor: '#047857',
+                                        color: 'white',
+                                        '&:hover': { 
+                                            bgcolor: '#047057',
+                                            transform: 'translateY(-2px)',
+                                            boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                                        },
+                                        transition: 'all 0.3s ease',
+                                        fontWeight: 'bold',
+                                        px: 4,
+                                        py: 1.5
                                     }}
                                 >
                                     Join Our Community
