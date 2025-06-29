@@ -18,6 +18,7 @@ import {
     Menu,
     MenuItem,
     Badge,
+    Button,
 } from '@mui/material';
 import {
     Menu as MenuIcon,
@@ -30,8 +31,10 @@ import {
     Notifications as NotificationsIcon,
     Warning as WarningIcon,
     NotificationsActive as AlertIcon,
+    Psychology as PsychologyIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { GenerosityAIChat } from '../ai/GenerosityAIChat';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -47,6 +50,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
     const [mobileOpen, setMobileOpen] = React.useState(false);
     const [warningCount, setWarningCount] = React.useState(0);
     const [alertCount, setAlertCount] = React.useState(0);
+    const [chatOpen, setChatOpen] = React.useState(false);
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
@@ -134,6 +138,37 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
                         <ListItemText primary={item.text} />
                     </ListItem>
                 ))}
+                
+                {/* Generosity AI Chat Button */}
+                <ListItem
+                    component="div"
+                    onClick={() => setChatOpen(true)}
+                    sx={{ 
+                        cursor: 'pointer',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        mx: 1,
+                        borderRadius: 2,
+                        mb: 1,
+                        '&:hover': {
+                            background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                        }
+                    }}
+                >
+                    <ListItemIcon sx={{ color: 'white' }}>
+                        <PsychologyIcon />
+                    </ListItemIcon>
+                    <ListItemText 
+                        primary="Generosity AI" 
+                        primaryTypographyProps={{ 
+                            sx: { 
+                                fontWeight: 'bold',
+                                fontSize: '0.9rem'
+                            } 
+                        }}
+                    />
+                </ListItem>
+                
                 <Divider />
                 <ListItem component="div" onClick={logout} sx={{ cursor: 'pointer' }}>
                     <ListItemIcon><LogoutIcon /></ListItemIcon>
@@ -186,6 +221,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
             >
                 {children}
             </Box>
+            
+            {/* Generosity AI Chat Dialog */}
+            <GenerosityAIChat 
+                open={chatOpen} 
+                onClose={() => setChatOpen(false)} 
+            />
         </Box>
     );
 }; 
